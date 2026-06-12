@@ -36,6 +36,9 @@ services:
       ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 72h
+      # Полный скан вычищает из базы файлы, помеченные missing
+      # (иначе записи-призраки копятся после замен/апгрейдов Lidarr)
+      ND_SCANNER_PURGEMISSING: full
       ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
       ND_DEFAULTTHEME: ${NAVIDROME_THEME}
       # Скробблинг через multi-scrobbler: он различает юзеров по токену
