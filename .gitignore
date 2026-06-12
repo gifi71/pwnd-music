@@ -1,0 +1,15 @@
+# Secrets & local environment
+.env
+
+# Runtime data (configs, databases, caches of containers)
+config/
+data/
+
+# OMC state
+.omc/
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+.DS_Store

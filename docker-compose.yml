@@ -1,0 +1,179 @@
+name: pwnd-music
+
+# Ротация docker-логов: без неё json-file растёт бесконечно
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+networks:
+  music:
+    driver: bridge
+
+services:
+  # ── Стриминг ─────────────────────────────────────────────────────────────
+  navidrome:
+    image: deluan/navidrome:0.62.0
+    container_name: navidrome
+    user: "${PUID}:${PGID}"
+    environment:
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: info
+      ND_SESSIONTIMEOUT: 72h
+      ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
+      ND_DEFAULTTHEME: ${NAVIDROME_THEME}
+      # Скробблинг в Koito через его ListenBrainz-совместимый API.
+      # Токен: Koito UI -> Settings -> API Keys; вставить в
+      # Navidrome -> Settings -> Personal -> Scrobble to ListenBrainz.
+      ND_LISTENBRAINZ_ENABLED: "true"
+      ND_LISTENBRAINZ_BASEURL: http://koito:4110/apis/listenbrainz/1
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/navidrome:/data
+      - ${DATA_DIR}/music:/music:ro
+    ports:
+      - "${NAVIDROME_PORT}:4533"
+    networks: [music]
+    depends_on:
+      - koito
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Статистика прослушиваний ─────────────────────────────────────────────
+  koito:
+    image: gabehf/koito:v0.3.2
+    container_name: koito
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/koito:/etc/koito
+    ports:
+      - "${KOITO_PORT}:4110"
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Менеджер коллекции ───────────────────────────────────────────────────
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls30
+    container_name: lidarr
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/lidarr:/config
+      # Единый /data: библиотека и загрузки на одной ФС,
+      # импорт = hardlink, без копирования и удвоения места.
+      - ${DATA_DIR}:/data
+    ports:
+      - "${LIDARR_PORT}:8686"
+    networks: [music]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8686/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Торрент-клиент ───────────────────────────────────────────────────────
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:5.2.1_v2.0.13-ls460
+    container_name: qbittorrent
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: ${QBIT_TORRENT_PORT}
+    volumes:
+      - ${CONFIG_DIR}/qbittorrent:/config
+      # Тот же путь, что видит Lidarr: /data/downloads/torrents
+      - ${DATA_DIR}/downloads/torrents:/data/downloads/torrents
+    ports:
+      - "${QBIT_WEBUI_PORT}:8080"
+      - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}"
+      - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}/udp"
+    networks: [music]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Soulseek-демон ───────────────────────────────────────────────────────
+  slskd:
+    image: slskd/slskd:0.25.1
+    container_name: slskd
+    user: "${PUID}:${PGID}"
+    environment:
+      SLSKD_SLSK_USERNAME: ${SLSKD_SLSK_USERNAME}
+      SLSKD_SLSK_PASSWORD: ${SLSKD_SLSK_PASSWORD}
+      SLSKD_SLSK_LISTEN_PORT: ${SLSKD_LISTEN_PORT}
+      SLSKD_USERNAME: ${SLSKD_WEB_USERNAME}
+      SLSKD_PASSWORD: ${SLSKD_WEB_PASSWORD}
+      # Ключ для Soularr (мин. 16 символов); cidr ограничивает использование
+      # ключа приватными сетями (docker-сеть + LAN)
+      SLSKD_API_KEY: "role=ReadWrite;cidr=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16;${SLSKD_API_KEY}"
+      SLSKD_DOWNLOADS_DIR: /data/downloads/slskd/complete
+      SLSKD_INCOMPLETE_DIR: /data/downloads/slskd/incomplete
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/slskd:/app
+      # Тот же путь, что видит Lidarr: /data/downloads/slskd
+      - ${DATA_DIR}/downloads/slskd:/data/downloads/slskd
+    ports:
+      - "${SLSKD_PORT}:5030"
+      - "${SLSKD_LISTEN_PORT}:${SLSKD_LISTEN_PORT}"
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Мост Lidarr ↔ slskd ──────────────────────────────────────────────────
+  soularr:
+    image: mrusse08/soularr:v1.2.2
+    container_name: soularr
+    user: "${PUID}:${PGID}"
+    environment:
+      TZ: ${TZ}
+      # Как часто опрашивать wanted-список Lidarr, секунды
+      SCRIPT_INTERVAL: ${SOULARR_INTERVAL}
+      WEBUI_ENABLED: "true"
+    volumes:
+      - ${CONFIG_DIR}/soularr:/data
+      - ${DATA_DIR}/downloads/slskd/complete:/downloads
+    ports:
+      - "${SOULARR_PORT}:8265"
+    networks: [music]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8265"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Soularr дёргает API Lidarr сразу на старте — ждём его готовности
+    depends_on:
+      lidarr:
+        condition: service_healthy
+      slskd:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped

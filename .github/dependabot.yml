@@ -1,0 +1,22 @@
+# Автообновление версий образов в docker-compose.yml.
+# Нативный механизм GitHub: без токенов, без сторонних экшнов.
+version: 2
+updates:
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:00"
+      timezone: "Asia/Vladivostok"
+    # Минорные и патчи — одним сгруппированным PR;
+    # мажорные приходят отдельными PR
+    groups:
+      containers-non-major:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
