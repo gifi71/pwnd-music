@@ -174,7 +174,8 @@ docker compose up -d
 3. Там же Downloads → Default Save Path: **`/data/downloads/torrents`**,
    и Behavior → Language → **Русский**.
 4. В Lidarr: Settings → Download Clients → `+` → qBittorrent:
-   Host `qbittorrent`, Port `8080`, логин/пароль из шага 2, Category `music`.
+   Host `qbittorrent`, Port `8090` (= `QBIT_WEBUI_PORT`), логин/пароль
+   из шага 2, Category `music`.
 
 ### 4. Lidarr → Soularr → slskd
 

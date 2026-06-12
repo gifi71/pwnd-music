@@ -135,19 +135,21 @@ services:
       PUID: ${PUID}
       PGID: ${PGID}
       TZ: ${TZ}
-      WEBUI_PORT: 8080
+      # Должен совпадать с публикуемым портом, иначе qBittorrent режет
+      # запросы по Host-заголовку (Unauthorized)
+      WEBUI_PORT: ${QBIT_WEBUI_PORT}
       TORRENTING_PORT: ${QBIT_TORRENT_PORT}
     volumes:
       - ${CONFIG_DIR}/qbittorrent:/config
       # Тот же путь, что видит Lidarr: /data/downloads/torrents
       - ${DATA_DIR}/downloads/torrents:/data/downloads/torrents
     ports:
-      - "${QBIT_WEBUI_PORT}:8080"
+      - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
       - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}"
       - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}/udp"
     networks: [music]
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:${QBIT_WEBUI_PORT}"]
       interval: 30s
       timeout: 5s
       retries: 5
