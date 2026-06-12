@@ -137,7 +137,9 @@ docker compose up -d
 
 ### 1. Navidrome → Koito (скробблинг)
 
-1. Открыть Koito `http://<host>:4110`, создать аккаунт.
+1. Открыть Koito `http://<host>:4110`. Визарда нет — аккаунт уже создан
+   автоматически при первом старте (логин/пароль — `KOITO_USERNAME` /
+   `KOITO_PASSWORD` из `.env`). Нажать **Sign In** и войти.
 2. Settings → **API Keys** → скопировать сгенерированный ключ.
 3. Открыть Navidrome `http://<host>:4533`, создать админа.
 4. Settings → Personal → включить **Scrobble to ListenBrainz** → вставить ключ → Save.

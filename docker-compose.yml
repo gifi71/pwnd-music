@@ -47,6 +47,9 @@ services:
     image: gabehf/koito:v0.3.2
     container_name: koito
     environment:
+      # Дефолтный юзер создаётся при первом старте (Koito однопользовательский)
+      KOITO_DEFAULT_USERNAME: ${KOITO_USERNAME}
+      KOITO_DEFAULT_PASSWORD: ${KOITO_PASSWORD}
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/koito:/etc/koito
