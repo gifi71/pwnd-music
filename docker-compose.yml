@@ -138,6 +138,14 @@ services:
       PUID: ${PUID}
       PGID: ${PGID}
       TZ: ${TZ}
+      # Загрузка определений индексеров (indexers.prowlarr.com) идёт на
+      # уровне приложения мимо UI-прокси. Из РФ Cloudflare даёт 403 ->
+      # заворачиваем весь внешний трафик Prowlarr в SOCKS5. Внутренние
+      # сервисы исключены через NO_PROXY (иначе синк с Lidarr сломается).
+      HTTP_PROXY: ${PROWLARR_PROXY}
+      HTTPS_PROXY: ${PROWLARR_PROXY}
+      ALL_PROXY: ${PROWLARR_PROXY}
+      NO_PROXY: localhost,127.0.0.1,lidarr,qbittorrent,slskd,navidrome,multi-scrobbler,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ${CONFIG_DIR}/prowlarr:/config
     ports:
