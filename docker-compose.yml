@@ -130,6 +130,30 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # ── Менеджер торрент-индексеров (RuTracker, NNM-Club и т.п.) ────────────
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.4.0.5397-ls149
+    container_name: prowlarr
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/prowlarr:/config
+    ports:
+      - "${PROWLARR_PORT}:9696"
+    networks: [music]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9696/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
   # ── Торрент-клиент ───────────────────────────────────────────────────────
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:5.2.1_v2.0.13-ls460

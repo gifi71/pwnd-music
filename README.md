@@ -11,6 +11,7 @@ Selfhosted-стек для музыки на Docker Compose: стриминг, �
 | [Koito](https://koito.io/) ×N | 4110, 4111… | Персональная статистика прослушиваний — свой инстанс на юзера (Koito однопользовательский) |
 | [multi-scrobbler](https://github.com/FoxxMD/multi-scrobbler) | 9078 | Роутер скробблов: по токену раскидывает прослушивания юзеров в их Koito |
 | [Lidarr](https://lidarr.audio/) | 8686 | Менеджер коллекции: следит за артистами, ищет релизы |
+| [Prowlarr](https://prowlarr.com/) | 9696 | Менеджер торрент-индексеров (RuTracker, NNM-Club), сам прописывает их в Lidarr |
 | [qBittorrent](https://www.qbittorrent.org/) | 8090 | Торрент-клиент для Lidarr |
 | [slskd](https://github.com/slskd/slskd) | 5030 | Soulseek-демон + веб-UI для ручного поиска |
 | [Soularr](https://github.com/mrusse/soularr) | 8265 | Мост: wanted-список Lidarr → автопоиск в Soulseek через slskd |
@@ -188,6 +189,17 @@ docker compose up -d
 
 slskd доступен на `http://<host>:5030` (логин из `.env`) — там же ручной поиск
 по Soulseek, если хочется качнуть что-то мимо Lidarr.
+
+### 5. Prowlarr: торрент-индексеры (NNM-Club, RuTracker)
+
+1. Открыть `http://<host>:9696`, задать аутентификацию.
+2. Если трекеры/метадата блокируются: Settings → Indexers → `+` Proxy →
+   Socks5 (хост/порт/креды своего прокси), Tag: `proxy`.
+3. Indexers → `+` → найти **NoNameClub** (или RuTracker) → логин/пароль
+   аккаунта трекера → при необходимости Tag `proxy` → Test → Save.
+4. Settings → Apps → `+` → Lidarr: Prowlarr Server `http://prowlarr:9696`,
+   Lidarr Server `http://lidarr:8686`, API Key из Lidarr (Settings →
+   General). Sync — индексер сам появится в Lidarr.
 
 ### Добавить юзера с личной статистикой
 
