@@ -16,22 +16,20 @@ Selfhosted-стек для музыки на Docker Compose: стриминг, �
 
 ## Поток данных
 
-```
-            ты добавил артиста/альбом
-                     ↓
-                  Lidarr ──────────────────┐
-                 ↓ (wanted)                ↓ (релиз найден на трекере)
-               Soularr                 qBittorrent
-                 ↓ API                     ↓
-               slskd → Soulseek     /data/downloads/torrents
-                 ↓
-        /data/downloads/slskd/complete
-                     ↓
-        Lidarr импортирует (hardlink) → /data/music
-                     ↓
-        Navidrome сканирует /data/music → стримит
-                     ↓ (трек доигран)
-        Koito ← ListenBrainz API ← Navidrome
+```mermaid
+flowchart TD
+    U([ты: добавил артиста/альбом]) --> L[Lidarr]
+    L -- "wanted-список" --> S[Soularr]
+    L -- "релиз найден на трекере" --> Q[qBittorrent]
+    S -- "API" --> SL[slskd]
+    SL -- "поиск" --> SS([сеть Soulseek])
+    SL --> D1["/data/downloads/slskd/complete"]
+    Q --> D2["/data/downloads/torrents"]
+    D1 --> IMP[Lidarr: импорт hardlink]
+    D2 --> IMP
+    IMP --> M["/data/music"]
+    M --> N[Navidrome: сканирует и стримит]
+    N -- "трек доигран → ListenBrainz API" --> K[Koito]
 ```
 
 ## Структура на диске
