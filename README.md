@@ -109,7 +109,7 @@ ${DATA_DIR}/                  # большой диск (по умолчанию
 ### Запуск стека
 
 ```bash
-git clone <repo-url> /opt/pwnd-music && cd /opt/pwnd-music
+git clone https://github.com/gifi71/pwnd-music.git /opt/pwnd-music && cd /opt/pwnd-music
 
 # 1. Окружение
 cp .env.example .env
