@@ -8,9 +8,10 @@ Selfhosted-стек для музыки на Docker Compose: стриминг, �
 | Сервис | Порт | Назначение |
 |---|---|---|
 | [Navidrome](https://www.navidrome.org/) | 4533 | Стриминг, веб-плеер, Subsonic API (мобильные клиенты: Symfonium, Tempo, play:Sub) |
-| [Koito](https://koito.io/) | 4110 | Статистика прослушиваний (своя замена Last.fm) |
+| [Koito](https://koito.io/) ×N | 4110, 4111… | Персональная статистика прослушиваний — свой инстанс на юзера (Koito однопользовательский) |
+| [multi-scrobbler](https://github.com/FoxxMD/multi-scrobbler) | 9078 | Роутер скробблов: по токену раскидывает прослушивания юзеров в их Koito |
 | [Lidarr](https://lidarr.audio/) | 8686 | Менеджер коллекции: следит за артистами, ищет релизы |
-| [qBittorrent](https://www.qbittorrent.org/) | 8080 | Торрент-клиент для Lidarr |
+| [qBittorrent](https://www.qbittorrent.org/) | 8090 | Торрент-клиент для Lidarr |
 | [slskd](https://github.com/slskd/slskd) | 5030 | Soulseek-демон + веб-UI для ручного поиска |
 | [Soularr](https://github.com/mrusse/soularr) | 8265 | Мост: wanted-список Lidarr → автопоиск в Soulseek через slskd |
 
@@ -29,7 +30,9 @@ flowchart TD
     D2 --> IMP
     IMP --> M["/data/music"]
     M --> N[Navidrome: сканирует и стримит]
-    N -- "трек доигран → ListenBrainz API" --> K[Koito]
+    N -- "трек доигран → ListenBrainz API" --> MS[multi-scrobbler]
+    MS -- "токен gifi" --> K1[koito-gifi]
+    MS -- "токен al" --> K2[koito-al]
 ```
 
 ## Структура на диске
@@ -46,6 +49,7 @@ ${DATA_DIR}/                  # большой диск (по умолчанию
 репозиторий/
 ├── docker-compose.yml
 ├── .env                      # секреты (НЕ в гите)
+├── ms-config/config.json     # роутинг multi-scrobbler (секреты — через env)
 ├── templates/soularr-config.ini
 └── config/                   # runtime-данные контейнеров (НЕ в гите)
 ```
@@ -135,16 +139,24 @@ docker compose up -d
 
 ## Пост-настройка (один раз, ~10 минут)
 
-### 1. Navidrome → Koito (скробблинг)
+### 1. Персональный скробблинг (Navidrome → multi-scrobbler → Koito)
 
-1. Открыть Koito `http://<host>:4110`. Визарда нет — аккаунт уже создан
-   автоматически при первом старте (логин/пароль — `KOITO_USERNAME` /
-   `KOITO_PASSWORD` из `.env`). Нажать **Sign In** и войти.
-2. Settings → **API Keys** → скопировать сгенерированный ключ.
-3. Открыть Navidrome `http://<host>:4533`, создать админа.
-4. Settings → Personal → включить **Scrobble to ListenBrainz** → вставить ключ → Save.
+У каждого юзера свой Koito; multi-scrobbler различает юзеров по токену
+(`LB_TOKEN_*` из `.env`). Кто статистику не хочет — просто не включает
+скробблинг у себя, остальное его не касается.
 
-Endpoint уже прописан в compose (`ND_LISTENBRAINZ_BASEURL`), руками ничего больше не надо.
+Подключение юзера (пример — gifi, для al аналогично со своими значениями):
+
+1. Открыть Navidrome `http://<host>:4533` — при первом входе создаётся админ.
+2. Открыть Koito юзера `http://<host>:4110` (al — `:4111`). Визарда нет —
+   аккаунт создан автоматически при первом старте (логин/пароль —
+   `KOITO_USERNAME` / `KOITO_PASSWORD` из `.env`). Нажать **Sign In**.
+3. Settings → **API Keys** → скопировать ключ → вписать в `.env` в
+   `KOITO_API_KEY_GIFI` → `docker compose up -d multi-scrobbler`.
+4. В Navidrome под юзером gifi: Settings → Personal → включить
+   **Scrobble to ListenBrainz** → вставить токен `LB_TOKEN_GIFI` из `.env` → Save.
+5. Проверка: послушать трек до конца → появится в его Koito.
+   Статус роутера: `http://<host>:9078`.
 
 ### 2. Lidarr: базовая настройка
 
@@ -157,7 +169,7 @@ Endpoint уже прописан в compose (`ND_LISTENBRAINZ_BASEURL`), рук�
 
 1. Логин qBittorrent — `admin`, пароль при первом старте временный, смотреть:
    `docker logs qbittorrent` → строка "temporary password".
-2. Открыть `http://<host>:8080`, сменить пароль:
+2. Открыть `http://<host>:8090`, сменить пароль:
    Tools → Options → Web UI.
 3. Там же Downloads → Default Save Path: **`/data/downloads/torrents`**,
    и Behavior → Language → **Русский**.
@@ -176,6 +188,17 @@ Endpoint уже прописан в compose (`ND_LISTENBRAINZ_BASEURL`), рук�
 slskd доступен на `http://<host>:5030` (логин из `.env`) — там же ручной поиск
 по Soulseek, если хочется качнуть что-то мимо Lidarr.
 
+### Добавить юзера с личной статистикой
+
+1. `docker-compose.yml`: скопировать блок `koito-gifi` → `koito-<имя>`,
+   заменить имя контейнера, том (`config/koito-<имя>`) и порт.
+2. `.env`: добавить `LB_TOKEN_<ИМЯ>` (openssl rand -hex 16),
+   `KOITO_API_KEY_<ИМЯ>=changeme`, `KOITO_<ИМЯ>_PORT`.
+3. В compose у `multi-scrobbler` пробросить обе новые переменные в `environment`.
+4. `ms-config/config.json`: добавить source и client по образцу существующих.
+5. `docker compose up -d`, затем шаги 2–4 из «Персонального скробблинга»
+   (забрать API-ключ нового Koito, юзер вставляет свой токен в Navidrome).
+
 ## Проверка, что всё связано
 
 1. В Lidarr добавить артиста с парой альбомов → Search.
@@ -183,7 +206,8 @@ slskd доступен на `http://<host>:5030` (логин из `.env`) — т
    ищет недостающее в Soulseek.
 3. После импорта файлы появляются в `/srv/media/music`, Navidrome подхватывает
    при сканировании (каждый час, либо вручную: Activity → Quick Scan).
-4. Послушать трек до конца → он появляется в Koito.
+4. Послушать трек до конца → он появляется в персональном Koito юзера
+   (если тот включил скробблинг).
 
 ## Обслуживание
 

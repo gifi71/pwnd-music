@@ -7,6 +7,21 @@ x-logging: &default-logging
     max-size: 10m
     max-file: "3"
 
+# Общая часть персональных Koito-инстансов (один на юзера, opt-in).
+# Добавить юзера: скопировать блок koito-gifi, заменить имя/порт/том,
+# добавить source+client в ms-config/config.json и ключи в .env.
+x-koito-base: &koito-base
+  image: gabehf/koito:v0.3.2
+  environment: &koito-env
+    # Дефолтный юзер создаётся при первом старте с чистой базой
+    KOITO_DEFAULT_USERNAME: ${KOITO_USERNAME}
+    KOITO_DEFAULT_PASSWORD: ${KOITO_PASSWORD}
+    TZ: ${TZ}
+  networks: [music]
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
 networks:
   music:
     driver: bridge
@@ -23,11 +38,11 @@ services:
       ND_SESSIONTIMEOUT: 72h
       ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
       ND_DEFAULTTHEME: ${NAVIDROME_THEME}
-      # Скробблинг в Koito через его ListenBrainz-совместимый API.
-      # Токен: Koito UI -> Settings -> API Keys; вставить в
-      # Navidrome -> Settings -> Personal -> Scrobble to ListenBrainz.
+      # Скробблинг через multi-scrobbler: он различает юзеров по токену
+      # (LB_TOKEN_* из .env) и раскидывает по персональным Koito.
+      # Юзер вставляет СВОЙ токен в Navidrome -> Settings -> Personal.
       ND_LISTENBRAINZ_ENABLED: "true"
-      ND_LISTENBRAINZ_BASEURL: http://koito:4110/apis/listenbrainz/1
+      ND_LISTENBRAINZ_BASEURL: http://multi-scrobbler:9078/1
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/navidrome:/data
@@ -36,30 +51,54 @@ services:
       - "${NAVIDROME_PORT}:4533"
     networks: [music]
     depends_on:
-      - koito
+      - multi-scrobbler
     security_opt:
       - no-new-privileges:true
     logging: *default-logging
     restart: unless-stopped
 
-  # ── Статистика прослушиваний ─────────────────────────────────────────────
-  koito:
-    image: gabehf/koito:v0.3.2
-    container_name: koito
+  # ── Роутер скробблов: токен юзера -> его персональный Koito ─────────────
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler:0.14.1
+    container_name: multi-scrobbler
     environment:
-      # Дефолтный юзер создаётся при первом старте (Koito однопользовательский)
-      KOITO_DEFAULT_USERNAME: ${KOITO_USERNAME}
-      KOITO_DEFAULT_PASSWORD: ${KOITO_PASSWORD}
       TZ: ${TZ}
+      # Переменные для [[...]]-интерполяции в ms-config/config.json
+      LB_TOKEN_GIFI: ${LB_TOKEN_GIFI}
+      LB_TOKEN_AL: ${LB_TOKEN_AL}
+      KOITO_USERNAME: ${KOITO_USERNAME}
+      KOITO_API_KEY_GIFI: ${KOITO_API_KEY_GIFI}
+      KOITO_API_KEY_AL: ${KOITO_API_KEY_AL}
     volumes:
-      - ${CONFIG_DIR}/koito:/etc/koito
+      - ${CONFIG_DIR}/multi-scrobbler:/config
+      # Декларативный конфиг — в гите, секреты приходят через env выше
+      - ./ms-config/config.json:/config/config.json:ro
     ports:
-      - "${KOITO_PORT}:4110"
+      - "${MS_PORT}:9078"
     networks: [music]
     security_opt:
       - no-new-privileges:true
     logging: *default-logging
     restart: unless-stopped
+
+  # ── Персональная статистика прослушиваний (по инстансу на юзера) ────────
+  koito-gifi:
+    <<: *koito-base
+    container_name: koito-gifi
+    volumes:
+      - ${CONFIG_DIR}/koito-gifi:/etc/koito
+    ports:
+      - "${KOITO_GIFI_PORT}:4110"
+    logging: *default-logging
+
+  koito-al:
+    <<: *koito-base
+    container_name: koito-al
+    volumes:
+      - ${CONFIG_DIR}/koito-al:/etc/koito
+    ports:
+      - "${KOITO_AL_PORT}:4110"
+    logging: *default-logging
 
   # ── Менеджер коллекции ───────────────────────────────────────────────────
   lidarr:

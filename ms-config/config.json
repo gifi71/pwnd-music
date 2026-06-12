@@ -1,0 +1,42 @@
+{
+  "sources": [
+    {
+      "name": "navidrome-gifi",
+      "type": "endpointlz",
+      "clients": ["koito-gifi"],
+      "data": {
+        "token": "[[LB_TOKEN_GIFI]]",
+        "username": "gifi"
+      }
+    },
+    {
+      "name": "navidrome-al",
+      "type": "endpointlz",
+      "clients": ["koito-al"],
+      "data": {
+        "token": "[[LB_TOKEN_AL]]",
+        "username": "al"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "name": "koito-gifi",
+      "type": "koito",
+      "data": {
+        "url": "http://koito-gifi:4110",
+        "username": "[[KOITO_USERNAME]]",
+        "token": "[[KOITO_API_KEY_GIFI]]"
+      }
+    },
+    {
+      "name": "koito-al",
+      "type": "koito",
+      "data": {
+        "url": "http://koito-al:4110",
+        "username": "[[KOITO_USERNAME]]",
+        "token": "[[KOITO_API_KEY_AL]]"
+      }
+    }
+  ]
+}
