@@ -99,6 +99,7 @@ services:
       KOITO_USERNAME: ${KOITO_USERNAME}
       KOITO_API_KEY_GIFI: ${KOITO_API_KEY_GIFI}
       KOITO_API_KEY_AL: ${KOITO_API_KEY_AL}
+      MLJ_API_KEY: ${MLJ_API_KEY}
     volumes:
       - ${CONFIG_DIR}/multi-scrobbler:/config
       # Декларативный конфиг — в гите, секреты приходят через env выше
@@ -129,6 +130,27 @@ services:
     ports:
       - "${KOITO_AL_PORT}:4110"
     logging: *default-logging
+
+  # ── Maloja: углублённая статистика/анализ (для gifi) ──────────────────────
+  # MS пишет сюда параллельно с koito-gifi (fan-out). Ключ создаётся в UI
+  # Maloja -> Admin -> API Keys -> в .env MLJ_API_KEY -> restart multi-scrobbler.
+  maloja:
+    image: krateng/maloja:3.2.4
+    container_name: maloja
+    environment:
+      MALOJA_DATA_DIRECTORY: /mljdata
+      MALOJA_SKIP_SETUP: "true"           # обязательно для контейнера
+      MALOJA_FORCE_PASSWORD: ${MALOJA_ADMIN_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/maloja:/mljdata
+    ports:
+      - "${MALOJA_PORT}:42010"
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
 
   # ── Менеджер коллекции ───────────────────────────────────────────────────
   lidarr:
