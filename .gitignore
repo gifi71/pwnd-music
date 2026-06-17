@@ -8,6 +8,13 @@ data/
 # OMC state
 .omc/
 
+# Serena state
+.serena/
+
+# Local working notes (не для публики)
+TODO.md
+*.local.md
+
 # Editor junk
 .vscode/
 .idea/
