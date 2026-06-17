@@ -319,3 +319,71 @@ services:
       - no-new-privileges:true
     logging: *default-logging
     restart: unless-stopped
+
+  # ── Одноразовая настройка Lidarr (quality/metadata/naming/обложки) ──────
+  # Идемпотентно применяет perfectionism-дефолты через API при каждом up.
+  # Читает API-ключ из config.xml Lidarr. Завершается после применения.
+  lidarr-provision:
+    build:
+      context: .
+      dockerfile: lidarr-provision/Dockerfile
+    image: pwnd-music/lidarr-provision:local
+    container_name: lidarr-provision
+    environment:
+      LIDARR_URL: http://lidarr:8686
+      LIDARR_CONFIG_XML: /lidarr-config/config.xml
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/lidarr:/lidarr-config:ro
+    networks: [music]
+    depends_on:
+      lidarr:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Обогащение: вшить обложки + синхро-лирику, .lrc рядом (ночной cron) ──
+  enrichment:
+    build:
+      context: .
+      dockerfile: enrichment/Dockerfile
+    image: pwnd-music/enrichment:local
+    container_name: enrichment
+    user: "${PUID}:${PGID}"
+    environment:
+      ENRICH_SCHEDULE: ${ENRICH_SCHEDULE}
+      MUSIC_DIR: /music
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TZ: ${TZ}
+    volumes:
+      # Пишет в теги и .lrc -> НЕ read-only
+      - ${DATA_DIR}/music:/music
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Детектор фейкового FLAC (ночной cron, только отчёт + Telegram) ───────
+  fakeflac:
+    build:
+      context: .
+      dockerfile: fakeflac/Dockerfile
+    image: pwnd-music/fakeflac:local
+    container_name: fakeflac
+    user: "${PUID}:${PGID}"
+    environment:
+      FAKEFLAC_SCHEDULE: ${FAKEFLAC_SCHEDULE}
+      MUSIC_DIR: /music
+      REPORTS_DIR: /reports
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TZ: ${TZ}
+    volumes:
+      - ${DATA_DIR}/music:/music:ro
+      - ${CONFIG_DIR}/fakeflac-reports:/reports
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
