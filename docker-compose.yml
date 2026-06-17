@@ -33,16 +33,43 @@ services:
     container_name: navidrome
     user: "${PUID}:${PGID}"
     environment:
-      ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 72h
+      # ── Сканер ──
+      # ND_SCANSCHEDULE переименован в Scanner.Schedule (0.62.0)
+      ND_SCANNER_SCHEDULE: ${NAVIDROME_SCAN_SCHEDULE}
+      ND_SCANNER_WATCHERWAIT: 5s
       # Полный скан вычищает из базы файлы, помеченные missing
       # (иначе записи-призраки копятся после замен/апгрейдов Lidarr)
       ND_SCANNER_PURGEMISSING: full
+      # ── UI ──
       ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
       ND_DEFAULTTHEME: ${NAVIDROME_THEME}
-      # Скробблинг через multi-scrobbler: он различает юзеров по токену
-      # (LB_TOKEN_* из .env) и раскидывает по персональным Koito.
+      # ── Внешние метадата-агенты (фото/био артистов, обложки) ──
+      ND_ENABLEEXTERNALSERVICES: "true"
+      ND_AGENTS: spotify,deezer,lastfm
+      ND_LASTFM_ENABLED: "true"
+      ND_LASTFM_APIKEY: ${ND_LASTFM_APIKEY}
+      ND_LASTFM_SECRET: ${ND_LASTFM_SECRET}
+      ND_LASTFM_LANGUAGE: ru
+      ND_SPOTIFY_ID: ${ND_SPOTIFY_ID}
+      ND_SPOTIFY_SECRET: ${ND_SPOTIFY_SECRET}
+      # ── Обложки / лирика ──
+      ND_COVERARTPRIORITY: "cover.*, folder.*, front.*, embedded, external"
+      ND_LYRICSPRIORITY: ".lrc,.txt,embedded"
+      ND_ENABLEMEDIAFILECOVERART: "true"
+      ND_ENABLEARTWORKPRECACHE: "true"
+      ND_IMAGECACHESIZE: 500MB
+      ND_TRANSCODINGCACHESIZE: 2GB
+      # ── Шаринг (для паблик-домена; ND_SHAREURL пусто = выкл) ──
+      ND_ENABLESHARING: "true"
+      ND_SHAREURL: ${NAVIDROME_SHAREURL}
+      # ── Автобэкап базы ──
+      ND_BACKUP_PATH: /data/backup
+      ND_BACKUP_SCHEDULE: "@every 24h"
+      ND_BACKUP_COUNT: "7"
+      # ── Скробблинг через multi-scrobbler: различает юзеров по токену ──
+      # (LB_TOKEN_* из .env), раскидывает по персональным Koito/Maloja.
       # Юзер вставляет СВОЙ токен в Navidrome -> Settings -> Personal.
       ND_LISTENBRAINZ_ENABLED: "true"
       ND_LISTENBRAINZ_BASEURL: http://multi-scrobbler:9078/1
@@ -111,6 +138,12 @@ services:
       PUID: ${PUID}
       PGID: ${PGID}
       TZ: ${TZ}
+      # Прокси для метадаты Lidarr (api.lidarr.audio за Cloudflare блочит РФ).
+      # Пусто = без прокси. Внутренние сервисы исключены через NO_PROXY.
+      HTTP_PROXY: ${LIDARR_PROXY}
+      HTTPS_PROXY: ${LIDARR_PROXY}
+      ALL_PROXY: ${LIDARR_PROXY}
+      NO_PROXY: localhost,127.0.0.1,prowlarr,qbittorrent,slskd,navidrome,multi-scrobbler,soularr,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ${CONFIG_DIR}/lidarr:/config
       # Единый /data: библиотека и загрузки на одной ФС,
@@ -210,11 +243,19 @@ services:
       SLSKD_API_KEY: "role=ReadWrite;cidr=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16;${SLSKD_API_KEY}"
       SLSKD_DOWNLOADS_DIR: /data/downloads/slskd/complete
       SLSKD_INCOMPLETE_DIR: /data/downloads/slskd/incomplete
+      # Раздача обратно в Soulseek. Шарим саму библиотеку (копится навсегда),
+      # т.к. Soularr уносит файлы из download-папки в библиотеку при импорте.
+      SLSKD_SHARED_DIR: /data/music;/data/downloads/slskd/complete
+      # Лимиты отдачи (дом. интернет): скачивание безлимит, отдача с потолком.
+      SLSKD_UPLOAD_SPEED_LIMIT: ${SLSKD_UPLOAD_SPEED_LIMIT}
+      SLSKD_UPLOAD_SLOTS: ${SLSKD_UPLOAD_SLOTS}
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/slskd:/app
       # Тот же путь, что видит Lidarr: /data/downloads/slskd
       - ${DATA_DIR}/downloads/slskd:/data/downloads/slskd
+      # Библиотека на раздачу, read-only (защита от случайной записи)
+      - ${DATA_DIR}/music:/data/music:ro
     ports:
       - "${SLSKD_PORT}:5030"
       - "${SLSKD_LISTEN_PORT}:${SLSKD_LISTEN_PORT}"
