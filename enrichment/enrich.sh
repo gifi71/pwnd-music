@@ -33,15 +33,23 @@ find "$MUSIC" -type d 2>/dev/null | while read -r dir; do
   done
 done
 
-# ── 2. Синхро-лирика из LRCLIB: вшить в теги + .lrc рядом ──
-# lrcup читает теги, ищет на lrclib.net, embed + download (.lrc sidecar).
-echo "[$(date)] lyrics pass (lrcup autosearch)" >>"$LOG"
-lrcup autosearch --embed --download "$MUSIC" >>"$LOG" 2>&1 || \
-  echo "lrcup завершился с ошибкой (см. выше)" >>"$LOG"
+# ── 2. Синхро-лирика каскадом (LRCLIB->Musixmatch->NetEase->Genius) ──
+# Больше покрытие, чем только LRCLIB — особенно русская/не-западная музыка.
+echo "[$(date)] lyrics pass (syncedlyrics cascade)" >>"$LOG"
+MUSIC_DIR="$MUSIC" python3 /usr/local/bin/lyrics.py >>"$LOG" 2>&1 \
+  || echo "lyrics.py завершился с ошибкой (см. выше)" >>"$LOG"
+
+# ── 3. ReplayGain / EBU R128 теги (нормализация громкости в Navidrome) ──
+echo "[$(date)] replaygain pass (rsgain easy)" >>"$LOG"
+rsgain easy "$MUSIC" >>"$LOG" 2>&1 || echo "rsgain завершился с ошибкой" >>"$LOG"
 
 art_lines=$(grep -c ' art: ' "$LOG" 2>/dev/null || echo 0)
-echo "[$(date)] enrich done. art=$art_lines" | tee -a "$LOG"
+lrc_done=$(grep -oE 'embedded=[0-9]+' "$LOG" | grep -oE '[0-9]+$' | tail -1)
+[ -z "$lrc_done" ] && lrc_done=0
+echo "[$(date)] enrich done. art=$art_lines lyrics=$lrc_done" | tee -a "$LOG"
 
 /usr/local/bin/notify.sh "🎵 <b>Enrichment</b> завершён ($(hostname))
 Обложек вшито: ${art_lines}
+Лирики: ${lrc_done}
+ReplayGain: применён
 Лог: $(basename "$LOG")"
