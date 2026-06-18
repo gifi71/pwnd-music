@@ -12,7 +12,13 @@ Env:
   LIDARR_API_KEY    (если пусто — читается из LIDARR_CONFIG_XML)
   LIDARR_CONFIG_XML (default /lidarr-config/config.xml)
 """
-import os, sys, json, time, re, urllib.request, urllib.error
+import os
+import sys
+import json
+import time
+import re
+import urllib.request
+import urllib.error
 
 URL = os.environ.get("LIDARR_URL", "http://lidarr:8686").rstrip("/")
 CONFIG_XML = os.environ.get("LIDARR_CONFIG_XML", "/lidarr-config/config.xml")
@@ -215,12 +221,18 @@ def main():
     KEY = api_key()
     print("Lidarr provision -> %s" % URL)
     wait_ready()
-    print("[1/5] quality profile");   provision_quality()
-    print("[2/5] metadata profile");  provision_metadata_profile()
-    print("[3/5] naming");            provision_naming()
-    print("[4/5] metadata consumer"); provision_metadata_consumer()
-    print("[5/5] root folder");       provision_rootfolder()
-    print("[+] soularr config");      render_soularr()
+    print("[1/5] quality profile")
+    provision_quality()
+    print("[2/5] metadata profile")
+    provision_metadata_profile()
+    print("[3/5] naming")
+    provision_naming()
+    print("[4/5] metadata consumer")
+    provision_metadata_consumer()
+    print("[5/5] root folder")
+    provision_rootfolder()
+    print("[+] soularr config")
+    render_soularr()
     print("Готово.")
 
 

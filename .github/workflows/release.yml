@@ -1,0 +1,31 @@
+name: release
+
+# На тег vX.Y.Z создаёт GitHub Release с авто-changelog.
+# Образы под этот тег собирает build-images.yml (type=semver -> :X.Y.Z).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Create Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          generate_release_notes: true
+          body: |
+            Образы стека для этого релиза (multi-arch, подписаны cosign, с SBOM):
+
+            ```
+            ghcr.io/${{ github.repository_owner }}/pwnd-music-lidarr-provision:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/pwnd-music-prowlarr-provision:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/pwnd-music-enrichment:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/pwnd-music-fakeflac:${{ github.ref_name }}
+            ```

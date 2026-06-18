@@ -6,7 +6,6 @@ set -uo pipefail
 MUSIC="${MUSIC_DIR:-/music}"
 TS="$(date +%F_%H%M)"
 LOG="/tmp/enrich-${TS}.log"
-flac_art=0 mp3_art=0
 
 echo "[$(date)] enrich start: $MUSIC" | tee "$LOG"
 
@@ -41,7 +40,6 @@ lrcup autosearch --embed --download "$MUSIC" >>"$LOG" 2>&1 || \
   echo "lrcup завершился с ошибкой (см. выше)" >>"$LOG"
 
 art_lines=$(grep -c ' art: ' "$LOG" 2>/dev/null || echo 0)
-lrc_lines=$(grep -ic 'lrc' "$LOG" 2>/dev/null || echo 0)
 echo "[$(date)] enrich done. art=$art_lines" | tee -a "$LOG"
 
 /usr/local/bin/notify.sh "🎵 <b>Enrichment</b> завершён ($(hostname))

@@ -1,7 +1,7 @@
-# Автообновление версий образов в docker-compose.yml.
-# Нативный механизм GitHub: без токенов, без сторонних экшнов.
+# Автообновление зависимостей. Нативный механизм GitHub: без токенов.
 version: 2
 updates:
+  # Образы в docker-compose.yml (сторонние сервисы)
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
@@ -9,14 +9,43 @@ updates:
       day: "monday"
       time: "02:00"
       timezone: "Asia/Vladivostok"
-    # Минорные и патчи — одним сгруппированным PR;
-    # мажорные приходят отдельными PR
     groups:
       containers-non-major:
         applies-to: version-updates
-        update-types:
-          - "minor"
-          - "patch"
+        update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
+    labels: ["dependencies"]
+
+  # Базовые образы в наших Dockerfile (FROM python:3.12-slim и т.п.)
+  - package-ecosystem: "docker"
+    directories:
+      - "/enrichment"
+      - "/fakeflac"
+      - "/lidarr-provision"
+      - "/prowlarr-provision"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:00"
+      timezone: "Asia/Vladivostok"
+    groups:
+      base-images:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+
+  # GitHub Actions (пины по SHA в workflow'ах обновляются с комментом версии)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:00"
+      timezone: "Asia/Vladivostok"
+    groups:
+      actions:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]

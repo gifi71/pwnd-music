@@ -1,10 +1,14 @@
 # Fake-FLAC детектор (FLAD, ML/ONNX). Ночной cron через supercronic.
 FROM python:3.12-slim
 
+# apt-пины в Debian брит — версии исчезают из репо
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git curl unzip flac ffmpeg libsndfile1 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# pip-пакеты тянут свежие фиксы; воспроизводимость даёт git-тег образа
+# hadolint ignore=DL3013
 RUN pip install --no-cache-dir \
         numpy librosa resampy matplotlib Pillow onnxruntime soundfile
 

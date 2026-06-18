@@ -12,7 +12,13 @@ Env:
   LIDARR_CONFIG_XML    (default /lidarr-config/config.xml)   — ключ Lidarr
   APP_NAME             (default Lidarr)
 """
-import os, sys, json, time, re, urllib.request, urllib.error
+import os
+import sys
+import json
+import time
+import re
+import urllib.request
+import urllib.error
 
 URL = os.environ.get("PROWLARR_URL", "http://prowlarr:9696").rstrip("/")
 PROWLARR_INTERNAL = os.environ.get("PROWLARR_INTERNAL", "http://prowlarr:9696")
