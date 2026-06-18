@@ -297,19 +297,29 @@ Smart-плейлисты (`.nsp`) из `smart-playlists/` уже скопиро�
   `Артист/Альбом (Год)/NN - Трек`, запись обложек артистов/альбомов на диск
   (Kodi-консьюмер). Читает API-ключ Lidarr из его `config.xml` сам.
 - **enrichment** (ночной cron) — вшивает обложку из `cover.jpg` в каждый трек
-  без встроенной картинки и синхро-лирику (LRCLIB) в теги, плюс кладёт `.lrc`
-  рядом. Так обложки и текст видны и в нативном UI, и в любом клиенте.
+  без встроенной картинки; синхро-лирику **каскадом** (LRCLIB → Musixmatch →
+  NetEase → Genius — больше покрытие, особенно RU) в теги + `.lrc` рядом; и
+  пишет **ReplayGain/R128 теги** (`rsgain`) — Navidrome нормализует громкость,
+  нет скачков между треками.
 - **fakeflac** (ночной cron) — детектит фейковый (перекодированный из mp3)
-  FLAC, шлёт отчёт в Telegram. Ничего не удаляет — решение за тобой.
+  FLAC (ML-модель [FLAD](https://github.com/Sg4Dylan/FLAD)), шлёт отчёт в
+  Telegram. Ничего не удаляет — решение за тобой.
+- **beets** (ночной cron) — НЕразрушающий чек библиотеки: целостность файлов
+  (`badfiles`) + дубликаты, отчёт в Telegram. Файлы не трогает.
+- **Smart-плейлисты** (`.nsp`) — Navidrome строит авто-обновляемые плейлисты по
+  правилам (недавнее, давно-не-слушал, любимое, топ-рейтинг). Примеры в
+  `smart-playlists/`, копируются в библиотеку при установке.
+- **aurral** — discovery: находит новое под вкус, добавляет в Lidarr, публикует
+  «flow»-плейлисты в Navidrome (см. пост-настройку).
 
 Метадата артистов (фото/био) в Navidrome требует ключей в `.env`:
 `ND_LASTFM_APIKEY/SECRET` ([last.fm/api](https://www.last.fm/api/account/create))
 и `ND_SPOTIFY_ID/SECRET` ([developer.spotify.com](https://developer.spotify.com/dashboard)).
 Без них страницы артистов будут без фото.
 
-**enrichment и fakeflac — локально собираемые образы** (`docker compose build`).
-fakeflac тянет ML-модель [FLAD](https://github.com/Sg4Dylan/FLAD). Если не нужны —
-закомментируй сервисы в compose.
+**enrichment / fakeflac / beets / *-provision — кастомные образы**: CI собирает
+их в GHCR (`docker compose pull`), либо локально `docker compose build`.
+fakeflac тянет ML-модель FLAD. Не нужны — закомментируй сервисы в compose.
 
 ### Maloja (углублённый анализ)
 
