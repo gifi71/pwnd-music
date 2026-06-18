@@ -130,24 +130,28 @@ nano .env        # пути, таймзона, логин Soulseek, пароли
 # 2. Подхватить переменные из .env для следующих шагов
 set -a; . ./.env; set +a
 
-# 3. Конфиг Soularr
-mkdir -p config/soularr
-cp templates/soularr-config.ini config/soularr/config.ini
-# LIDARR_API_KEY вставим после первого запуска (шаг ниже)
-
-# 4. Каталоги конфигов. ВАЖНО: создать заранее — иначе docker создаст их
+# 3. Каталоги конфигов. ВАЖНО: создать заранее — иначе docker создаст их
 # под root, а сервисы бегут под PUID и не смогут писать.
+# (config.ini Soularr НЕ копируем — его генерит lidarr-provision сам.)
 mkdir -p config/{navidrome,koito-gifi,koito-al,maloja,multi-scrobbler,lidarr,prowlarr,qbittorrent,slskd,soularr,fakeflac-reports}
+
+# 3a. Пресид API-ключа Maloja (чтобы не ходить за ним в UI)
+echo "default: $MLJ_API_KEY" > config/maloja/apikeys.yml
+
 sudo chown -R "$PUID:$PGID" config
 
-# 5. Каталоги данных
+# 4. Каталоги данных
 sudo mkdir -p "$DATA_DIR"/music "$DATA_DIR"/downloads/torrents \
               "$DATA_DIR"/downloads/slskd/{complete,incomplete}
 sudo chown -R "$PUID:$PGID" "$DATA_DIR"
 
-# 6. Поехали
+# 5. Поехали (первый раз собирает кастомные образы ~неск. минут)
 docker compose up -d
 ```
+
+При `up` контейнеры `lidarr-provision` и `prowlarr-provision` сами настроят
+Lidarr (качество, метадата, нейминг, обложки, **root folder `/data/music`**),
+сгенерят `config.ini` Soularr и свяжут Prowlarr→Lidarr — руками не надо.
 
 ## Пост-настройка (один раз, ~10 минут)
 
@@ -173,9 +177,12 @@ docker compose up -d
 ### 2. Lidarr: базовая настройка
 
 1. Открыть `http://<host>:8686`, задать аутентификацию.
-2. Settings → Media Management → Root Folder: **`/data/music`**.
-3. Settings → General → скопировать **API Key** (нужен для Soularr).
-4. Русский интерфейс: Settings → UI → Language → **Russian**.
+2. Русский интерфейс: Settings → UI → Language → **Russian**.
+
+Профиль качества (lossless), Metadata Profile, нейминг, обложки на диск и
+**root folder `/data/music`** уже настроены автоматически контейнером
+`lidarr-provision`. `config.ini` Soularr тоже сгенерён сам — вручную ничего
+вписывать не нужно.
 
 ### 3. Lidarr → qBittorrent
 
@@ -189,14 +196,11 @@ docker compose up -d
    Host `qbittorrent`, Port `8090` (= `QBIT_WEBUI_PORT`), логин/пароль
    из шага 2, Category `music`.
 
-### 4. Lidarr → Soularr → slskd
+### 4. Soularr → slskd
 
-1. Вписать API-ключ Lidarr (шаг 2.3) в `config/soularr/config.ini`
-   вместо `LIDARR_API_KEY`.
-2. Вместо `SLSKD_API_KEY` — то же значение, что в `.env`.
-3. `docker compose restart soularr`.
-4. Проверка: `docker logs soularr` — не должно быть ошибок подключения.
-   Веб-морда Soularr: `http://<host>:8265`.
+`config.ini` Soularr генерится автоматически (`lidarr-provision` подставляет
+ключи Lidarr и slskd). Делать ничего не нужно — проверка:
+`docker logs soularr` без ошибок подключения, веб-морда `http://<host>:8265`.
 
 slskd доступен на `http://<host>:5030` (логин из `.env`) — там же ручной поиск
 по Soulseek, если хочется качнуть что-то мимо Lidarr.

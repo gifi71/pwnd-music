@@ -309,10 +309,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    # Soularr дёргает API Lidarr сразу на старте — ждём его готовности
+    # Ждём lidarr-provision — он генерит config.ini Soularr и настраивает Lidarr
     depends_on:
-      lidarr:
-        condition: service_healthy
+      lidarr-provision:
+        condition: service_completed_successfully
       slskd:
         condition: service_started
     security_opt:
@@ -332,9 +332,13 @@ services:
     environment:
       LIDARR_URL: http://lidarr:8686
       LIDARR_CONFIG_XML: /lidarr-config/config.xml
+      # Авто-генерация config.ini Soularr (Lidarr-ключ из config.xml + slskd-ключ)
+      SOULARR_CONFIG_OUT: /soularr-out/config.ini
+      SLSKD_API_KEY: ${SLSKD_API_KEY}
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/lidarr:/lidarr-config:ro
+      - ${CONFIG_DIR}/soularr:/soularr-out
     networks: [music]
     depends_on:
       lidarr:

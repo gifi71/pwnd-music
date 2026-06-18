@@ -143,6 +143,32 @@ def provision_naming():
     print("  naming -> Артист/Альбом (Год)/NN - Трек (HTTP %s)" % st)
 
 
+def provision_rootfolder():
+    """Создать Root Folder /data/music с дефолтными профилями."""
+    root = os.environ.get("LIDARR_ROOT_FOLDER", "/data/music")
+    st, existing = req("GET", "/api/v1/rootfolder")
+    if st == 200 and any(r.get("path", "").rstrip("/") == root for r in existing):
+        print("  root folder '%s' уже есть — пропуск" % root)
+        return
+    st, qps = req("GET", "/api/v1/qualityprofile")
+    qid = next((p["id"] for p in qps if p["name"] == PROFILE_NAME),
+               qps[0]["id"] if qps else 1)
+    body = {
+        "path": root,
+        "name": "Music",
+        "defaultQualityProfileId": qid,
+        "defaultMetadataProfileId": 1,
+        "defaultMonitorOption": "all",
+        "defaultNewItemMonitorOption": "all",
+        "defaultTags": [],
+    }
+    st, resp = req("POST", "/api/v1/rootfolder", body)
+    if st in (200, 201):
+        print("  root folder '%s' создан" % root)
+    else:
+        print("  root folder: HTTP %s %s" % (st, resp))
+
+
 def provision_metadata_consumer():
     """Kodi/Emby консьюмер: писать обложки артистов/альбомов на диск."""
     st, consumers = req("GET", "/api/v1/metadata")
@@ -161,15 +187,40 @@ def provision_metadata_consumer():
     print("  Kodi metadata consumer -> обложки на диск (HTTP %s)" % st)
 
 
+def render_soularr():
+    """Сгенерить config/soularr/config.ini из шаблона + ключи (Lidarr из
+    config.xml, slskd из env). Убирает ручную правку конфига Soularr."""
+    tmpl = os.environ.get("SOULARR_TEMPLATE", "/soularr-template.ini")
+    out = os.environ.get("SOULARR_CONFIG_OUT")           # напр. /soularr-out/config.ini
+    slskd_key = os.environ.get("SLSKD_API_KEY", "")
+    if not out:
+        return
+    if os.path.exists(out):
+        print("  soularr config уже есть — пропуск")
+        return
+    if not os.path.exists(tmpl):
+        print("  soularr шаблон не найден (%s) — пропуск" % tmpl)
+        return
+    with open(tmpl) as f:
+        content = f.read()
+    content = content.replace("LIDARR_API_KEY", KEY).replace("SLSKD_API_KEY", slskd_key)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w") as f:
+        f.write(content)
+    print("  soularr config сгенерён -> %s" % out)
+
+
 def main():
     global KEY
     KEY = api_key()
     print("Lidarr provision -> %s" % URL)
     wait_ready()
-    print("[1/4] quality profile");   provision_quality()
-    print("[2/4] metadata profile");  provision_metadata_profile()
-    print("[3/4] naming");            provision_naming()
-    print("[4/4] metadata consumer"); provision_metadata_consumer()
+    print("[1/5] quality profile");   provision_quality()
+    print("[2/5] metadata profile");  provision_metadata_profile()
+    print("[3/5] naming");            provision_naming()
+    print("[4/5] metadata consumer"); provision_metadata_consumer()
+    print("[5/5] root folder");       provision_rootfolder()
+    print("[+] soularr config");      render_soularr()
     print("Готово.")
 
 
