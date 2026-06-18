@@ -327,7 +327,7 @@ services:
     build:
       context: .
       dockerfile: lidarr-provision/Dockerfile
-    image: pwnd-music/lidarr-provision:local
+    image: ghcr.io/gifi71/pwnd-music-lidarr-provision:latest
     container_name: lidarr-provision
     environment:
       LIDARR_URL: http://lidarr:8686
@@ -341,12 +341,37 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # ── Одноразовая автосвязка Prowlarr -> Lidarr (индексеры синкаются сами) ─
+  prowlarr-provision:
+    build:
+      context: .
+      dockerfile: prowlarr-provision/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-prowlarr-provision:latest
+    container_name: prowlarr-provision
+    environment:
+      PROWLARR_URL: http://prowlarr:9696
+      PROWLARR_INTERNAL: http://prowlarr:9696
+      LIDARR_INTERNAL: http://lidarr:8686
+      PROWLARR_CONFIG_XML: /prowlarr-config/config.xml
+      LIDARR_CONFIG_XML: /lidarr-config/config.xml
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/prowlarr:/prowlarr-config:ro
+      - ${CONFIG_DIR}/lidarr:/lidarr-config:ro
+    networks: [music]
+    depends_on:
+      lidarr:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    restart: "no"
+
   # ── Обогащение: вшить обложки + синхро-лирику, .lrc рядом (ночной cron) ──
   enrichment:
     build:
       context: .
       dockerfile: enrichment/Dockerfile
-    image: pwnd-music/enrichment:local
+    image: ghcr.io/gifi71/pwnd-music-enrichment:latest
     container_name: enrichment
     user: "${PUID}:${PGID}"
     environment:
@@ -369,7 +394,7 @@ services:
     build:
       context: .
       dockerfile: fakeflac/Dockerfile
-    image: pwnd-music/fakeflac:local
+    image: ghcr.io/gifi71/pwnd-music-fakeflac:latest
     container_name: fakeflac
     user: "${PUID}:${PGID}"
     environment:
