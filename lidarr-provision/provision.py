@@ -194,19 +194,20 @@ def provision_metadata_consumer():
 
 
 def provision_ui_prefs():
-    """РФ-дефолты UI: понедельник + русские форматы даты/времени.
-    uiLanguage НЕ трогаем — его id по API не достать надёжно (ставится в UI)."""
+    """РФ-дефолты UI: русский язык, понедельник, русские форматы даты/времени.
+    uiLanguage=11 — id русского для Lidarr 3.1 (env LIDARR_UI_LANGUAGE для override)."""
     st, ui = req("GET", "/api/v1/config/ui")
     if st != 200:
         print("  ui config: HTTP %s — пропуск" % st)
         return
+    ui["uiLanguage"] = int(os.environ.get("LIDARR_UI_LANGUAGE", "11"))  # 11 = русский
     ui["firstDayOfWeek"] = 1                        # понедельник
     ui["calendarWeekColumnHeader"] = "ddd D.MM"
     ui["shortDateFormat"] = "DD.MM.YYYY"
     ui["longDateFormat"] = "dddd, D MMMM YYYY"
     ui["timeFormat"] = "HH:mm"
     st, _ = req("PUT", "/api/v1/config/ui", ui)
-    print("  ui -> понедельник + РФ дата/время (HTTP %s)" % st)
+    print("  ui -> русский + понедельник + РФ дата/время (HTTP %s)" % st)
 
 
 def provision_write_tags():

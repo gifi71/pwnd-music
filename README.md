@@ -194,12 +194,11 @@ Lidarr (качество, метадата, нейминг, обложки, **ro
 ### 2. Lidarr: базовая настройка
 
 1. Открыть `http://<host>:8686`, задать аутентификацию.
-2. Русский интерфейс: Settings → UI → Language → **Russian**.
 
-Профиль качества (lossless), Metadata Profile, нейминг, обложки на диск и
-**root folder `/data/music`** уже настроены автоматически контейнером
-`lidarr-provision`. `config.ini` Soularr тоже сгенерён сам — вручную ничего
-вписывать не нужно.
+Всё остальное Lidarr настраивает контейнер `lidarr-provision` автоматически
+(см. [«Что Lidarr настраивает сам»](#что-lidarr-настраивает-сам-iac)) —
+русский язык, профили, нейминг, обложки, root folder, конфиг Soularr. Руками
+ничего вписывать не нужно.
 
 ### 3. Lidarr → qBittorrent
 
@@ -245,6 +244,28 @@ slskd доступен на `http://<host>:5030` (логин из `.env`) — т
 4. `ms-config/config.json`: добавить source и client по образцу существующих.
 5. `docker compose up -d`, затем шаги 2–4 из «Персонального скробблинга»
    (забрать API-ключ нового Koito, юзер вставляет свой токен в Navidrome).
+
+## Что Lidarr настраивает сам (IaC)
+
+Контейнер `lidarr-provision` при каждом `docker compose up` декларативно
+применяет через API Lidarr перечисленное ниже. Это **источник истины в коде** —
+правки через UI Lidarr будут перезаписаны на следующем `up`. Нужно поменять
+дефолт — правь `lidarr-provision/provision.py`, а не UI.
+
+| Настройка | Значение |
+|---|---|
+| Quality Profile | `Lossless (perfectionist)` — lossless, MP3-320 только fallback, cutoff=FLAC; **остальные профили удаляются** |
+| Metadata Profile | тянуть всё (Album/EP/Single + все secondary) |
+| Track Naming | `{Артист}/{Альбом} (Год)/NN - Трек`, rename ON |
+| Metadata Consumer | Kodi/Emby — обложки артистов/альбомов на диск |
+| Write Audio Tags | `allFiles` — тегать файлы метадатой MusicBrainz + вшивать обложку |
+| Root Folder | `/data/music` |
+| UI язык | русский (`uiLanguage=11`, env `LIDARR_UI_LANGUAGE` для override) |
+| UI дата/время | понедельник, `DD.MM.YYYY`, `HH:mm` (РФ) |
+| Soularr `config.ini` | генерится из шаблона + ключи Lidarr/slskd |
+
+Аналогично `prowlarr-provision` создаёт связку Prowlarr→Lidarr (индексеры
+синкаются сами).
 
 ## Перфекционизм по умолчанию
 
