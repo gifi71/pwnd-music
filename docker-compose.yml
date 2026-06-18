@@ -329,6 +329,7 @@ services:
       dockerfile: lidarr-provision/Dockerfile
     image: ghcr.io/gifi71/pwnd-music-lidarr-provision:latest
     container_name: lidarr-provision
+    user: "${PUID}:${PGID}"
     environment:
       LIDARR_URL: http://lidarr:8686
       LIDARR_CONFIG_XML: /lidarr-config/config.xml
@@ -352,6 +353,7 @@ services:
       dockerfile: prowlarr-provision/Dockerfile
     image: ghcr.io/gifi71/pwnd-music-prowlarr-provision:latest
     container_name: prowlarr-provision
+    user: "${PUID}:${PGID}"
     environment:
       PROWLARR_URL: http://prowlarr:9696
       PROWLARR_INTERNAL: http://prowlarr:9696

@@ -1,0 +1,12 @@
+# Trivy config (misconfig) исключения — с обоснованием.
+
+# DS-0002: "образ запускается под root (нет USER в Dockerfile)".
+# Все наши сервисы запускаются под user: "${PUID}:${PGID}" в docker-compose.yml
+# (least-privilege). Trivy сканит Dockerfile отдельно и не видит compose-override.
+# USER в самом Dockerfile не хардкодим — иначе сломается гибкий PUID/PGID.
+DS-0002
+
+# DS-0026: "нет HEALTHCHECK в Dockerfile".
+# Это cron-демоны (enrichment/fakeflac, supervised supercronic) и одноразовые
+# init-контейнеры (*-provision, exit после применения) — healthcheck не нужен.
+DS-0026
