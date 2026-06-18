@@ -1,0 +1,10 @@
+{
+  "name": "❤️ Любимое",
+  "comment": "Отмеченные как loved",
+  "all": [
+    { "is": { "loved": true } }
+  ],
+  "sort": "dateLoved",
+  "order": "desc",
+  "limit": 500
+}

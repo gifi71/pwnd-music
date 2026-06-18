@@ -11,6 +11,7 @@ on:
       - "fakeflac/**"
       - "lidarr-provision/**"
       - "prowlarr-provision/**"
+      - "beets/**"
       - "scripts/**"
       - ".github/workflows/build-images.yml"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - "fakeflac/**"
       - "lidarr-provision/**"
       - "prowlarr-provision/**"
+      - "beets/**"
       - "scripts/**"
   workflow_dispatch:
 
@@ -43,6 +45,7 @@ jobs:
           - fakeflac
           - lidarr-provision
           - prowlarr-provision
+          - beets
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 

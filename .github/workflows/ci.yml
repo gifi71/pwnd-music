@@ -27,6 +27,7 @@ jobs:
           - fakeflac/Dockerfile
           - lidarr-provision/Dockerfile
           - prowlarr-provision/Dockerfile
+          - beets/Dockerfile
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
@@ -39,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: shellcheck (предустановлен на runner)
-        run: shellcheck scripts/*.sh enrichment/*.sh fakeflac/*.sh
+        run: shellcheck scripts/*.sh enrichment/*.sh fakeflac/*.sh beets/*.sh
 
   ruff:
     runs-on: ubuntu-latest

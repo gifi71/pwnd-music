@@ -1,0 +1,10 @@
+{
+  "name": "⭐ Высокий рейтинг",
+  "comment": "Рейтинг 4 и выше",
+  "all": [
+    { "gt": { "rating": 3 } }
+  ],
+  "sort": "rating",
+  "order": "desc",
+  "limit": 200
+}

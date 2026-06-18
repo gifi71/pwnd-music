@@ -23,6 +23,7 @@ updates:
       - "/fakeflac"
       - "/lidarr-provision"
       - "/prowlarr-provision"
+      - "/beets"
     schedule:
       interval: "weekly"
       day: "monday"

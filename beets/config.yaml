@@ -1,0 +1,19 @@
+# beets — режим чекера. НИКОГДА не двигает/реннеймит/переписывает файлы.
+directory: /music
+library: /config/beets.db
+
+import:
+  move: no
+  copy: no
+  write: no
+  autotag: no        # без автоматча MusicBrainz — только каталогизация
+  quiet: yes
+  resume: no
+  incremental: yes   # повторный прогон не пересматривает уже учтённое
+
+plugins: badfiles duplicates chroma
+
+# chroma (AcoustID-фингерпринт) — доступен для ручного `beet duplicates --full`
+# и идентификации mislabeled-треков. В авто-кроне не используется (нужен autotag).
+chroma:
+  auto: no

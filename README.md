@@ -53,8 +53,10 @@ docker compose up -d                       # первый раз СОБИРАЕ�
 | [slskd](https://github.com/slskd/slskd) | 5030 | Soulseek-демон + веб-UI для ручного поиска |
 | [Soularr](https://github.com/mrusse/soularr) | 8265 | Мост: wanted-список Lidarr → автопоиск в Soulseek через slskd |
 | lidarr-provision | — | Одноразовая настройка Lidarr через API (качество/метадата/нейминг/обложки) |
-| enrichment | — | Ночной cron: вшивает обложки и синхро-лирику в треки, кладёт `.lrc` рядом |
+| [aurral](https://github.com/lklynet/aurral) | 3001 | Discovery + request-UI: находит новое под вкус → Lidarr, «flow»-плейлисты в Navidrome |
+| enrichment | — | Ночной cron: обложки + синхро-лирика (каскад) + ReplayGain-теги (rsgain) |
 | fakeflac | — | Ночной cron: детектит фейковый (перекодированный) FLAC, шлёт отчёт |
+| beets | — | Ночной cron: НЕразрушающий чек целостности + дубликатов, шлёт отчёт |
 
 ## Поток данных
 
@@ -150,16 +152,20 @@ set -a; . ./.env; set +a
 # 3. Каталоги конфигов. ВАЖНО: создать заранее — иначе docker создаст их
 # под root, а сервисы бегут под PUID и не смогут писать.
 # (config.ini Soularr НЕ копируем — его генерит lidarr-provision сам.)
-mkdir -p config/{navidrome,koito-gifi,koito-al,maloja,multi-scrobbler,lidarr,prowlarr,qbittorrent,slskd,soularr,fakeflac-reports}
+mkdir -p config/{navidrome,koito-gifi,koito-al,maloja,multi-scrobbler,lidarr,prowlarr,qbittorrent,slskd,soularr,fakeflac-reports,aurral,beets,beets-reports}
 
 # 3a. Пресид API-ключа Maloja (чтобы не ходить за ним в UI)
 echo "default: $MLJ_API_KEY" > config/maloja/apikeys.yml
 
 sudo chown -R "$PUID:$PGID" config
 
-# 4. Каталоги данных
-sudo mkdir -p "$DATA_DIR"/music "$DATA_DIR"/downloads/torrents \
+# 4. Каталоги данных (+ _aurral для плейлистов discovery)
+sudo mkdir -p "$DATA_DIR"/music/_aurral "$DATA_DIR"/downloads/torrents \
               "$DATA_DIR"/downloads/slskd/{complete,incomplete}
+
+# 4a. Smart-плейлисты (.nsp) — копируем в библиотеку (Navidrome их подхватит)
+cp smart-playlists/*.nsp "$DATA_DIR"/music/
+
 sudo chown -R "$PUID:$PGID" "$DATA_DIR"
 
 # 5. Поехали (первый раз собирает кастомные образы ~неск. минут)
@@ -233,6 +239,19 @@ slskd доступен на `http://<host>:5030` (логин из `.env`) — т
 `prowlarr-provision` при `docker compose up` (App «Lidarr», fullSync). Каждый
 добавленный индексер сам появляется в Lidarr — Settings → Apps руками настраивать
 не нужно. (Если хочешь проверить: Prowlarr → Settings → Apps → там уже есть Lidarr.)
+
+### 6. aurral: discovery + реквесты (опционально)
+
+`aurral` (`http://<host>:3001`) находит новую музыку под твой вкус, добавляет в
+Lidarr и публикует «flow»-плейлисты в Navidrome. Интеграции — в его UI (не env):
+1. Открыть `:3001`, в настройках вписать **Lidarr** (`http://lidarr:8686` + API key),
+   **Navidrome/Subsonic** (`http://navidrome:4533` + логин/пароль), опц. **Last.fm**
+   и **ListenBrainz** (источники истории для рекомендаций).
+2. Плейлисты aurral пишутся в `${DATA_DIR}/music/_aurral` → Navidrome их видит.
+
+Smart-плейлисты (`.nsp`) из `smart-playlists/` уже скопированы в библиотеку при
+установке — Navidrome строит их сам по правилам (недавнее, давно не слушал,
+любимое, топ-рейтинг). Правь файлы под себя.
 
 ### Добавить юзера с личной статистикой
 

@@ -1,0 +1,10 @@
+{
+  "name": "🆕 Недавно добавленное",
+  "comment": "Треки, добавленные за последние 30 дней",
+  "all": [
+    { "inTheLast": { "dateAdded": 30 } }
+  ],
+  "sort": "dateAdded",
+  "order": "desc",
+  "limit": 200
+}

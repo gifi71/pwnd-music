@@ -1,0 +1,11 @@
+{
+  "name": "🔄 Давно не слушал",
+  "comment": "Игралось хоть раз, но не за последние 90 дней",
+  "all": [
+    { "gt": { "playCount": 0 } },
+    { "notInTheLast": { "lastPlayed": 90 } }
+  ],
+  "sort": "lastPlayed",
+  "order": "asc",
+  "limit": 100
+}

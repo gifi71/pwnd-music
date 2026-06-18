@@ -47,6 +47,7 @@ services:
       # Полный скан вычищает из базы файлы, помеченные missing
       # (иначе записи-призраки копятся после замен/апгрейдов Lidarr)
       ND_SCANNER_PURGEMISSING: full
+      ND_AUTOIMPORTPLAYLISTS: "true"
       # ── UI ──
       ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
       ND_DEFAULTTHEME: ${NAVIDROME_THEME}
@@ -162,6 +163,30 @@ services:
       - ${CONFIG_DIR}/maloja:/mljdata
     ports:
       - "${MALOJA_PORT}:42010"
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Discovery + request-UI («Overseerr для музыки») ─────────────────────
+  # Находит новое под вкус (история/теги) -> добавляет в Lidarr -> публикует
+  # «flow»-плейлисты в Navidrome. Интеграции (Lidarr/Navidrome/Last.fm/
+  # ListenBrainz) настраиваются в UI :3001 ПОСЛЕ старта, не через env.
+  aurral:
+    image: ghcr.io/lklynet/aurral:1.24.0
+    container_name: aurral
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      DOWNLOAD_FOLDER: /app/downloads
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/aurral:/app/backend/data
+      # Плейлисты aurral пишутся сюда -> Navidrome видит их в /music/_aurral
+      - ${DATA_DIR}/music/_aurral:/app/downloads
+    ports:
+      - "${AURRAL_PORT}:3001"
     networks: [music]
     security_opt:
       - no-new-privileges:true
@@ -432,6 +457,31 @@ services:
     volumes:
       - ${DATA_DIR}/music:/music:ro
       - ${CONFIG_DIR}/fakeflac-reports:/reports
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── beets: НЕразрушающий чек библиотеки (целостность + дубли, cron) ──────
+  beets:
+    build:
+      context: .
+      dockerfile: beets/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-beets:latest
+    container_name: beets
+    user: "${PUID}:${PGID}"
+    environment:
+      BEETS_SCHEDULE: ${BEETS_SCHEDULE}
+      MUSIC_DIR: /music
+      REPORTS_DIR: /reports
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TZ: ${TZ}
+    volumes:
+      - ${DATA_DIR}/music:/music:ro
+      - ${CONFIG_DIR}/beets:/config
+      - ${CONFIG_DIR}/beets-reports:/reports
     networks: [music]
     security_opt:
       - no-new-privileges:true
