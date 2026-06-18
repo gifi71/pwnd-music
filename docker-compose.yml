@@ -16,6 +16,11 @@ x-koito-base: &koito-base
     # Дефолтный юзер создаётся при первом старте с чистой базой
     KOITO_DEFAULT_USERNAME: ${KOITO_USERNAME}
     KOITO_DEFAULT_PASSWORD: ${KOITO_PASSWORD}
+    # Прокси: Koito тянет фото с MusicBrainz/Cover Art Archive/Deezer (блок РФ)
+    HTTP_PROXY: ${PROXY_URL}
+    HTTPS_PROXY: ${PROXY_URL}
+    ALL_PROXY: ${PROXY_URL}
+    NO_PROXY: localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     TZ: ${TZ}
   networks: [music]
   security_opt:
@@ -75,9 +80,9 @@ services:
       ND_LISTENBRAINZ_BASEURL: http://multi-scrobbler:9078/1
       # Прокси для метадаты-агентов (Spotify/Last.fm часто блочат РФ). Пусто =
       # без прокси. NO_PROXY обязателен — иначе скробблы в MS пойдут через прокси.
-      HTTP_PROXY: ${NAVIDROME_PROXY}
-      HTTPS_PROXY: ${NAVIDROME_PROXY}
-      ALL_PROXY: ${NAVIDROME_PROXY}
+      HTTP_PROXY: ${PROXY_URL}
+      HTTPS_PROXY: ${PROXY_URL}
+      ALL_PROXY: ${PROXY_URL}
       NO_PROXY: localhost,127.0.0.1,multi-scrobbler,lidarr,prowlarr,qbittorrent,slskd,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       TZ: ${TZ}
     volumes:
@@ -147,6 +152,11 @@ services:
       MALOJA_DATA_DIRECTORY: /mljdata
       MALOJA_SKIP_SETUP: "true"           # обязательно для контейнера
       MALOJA_FORCE_PASSWORD: ${MALOJA_ADMIN_PASSWORD}
+      # Прокси: Maloja тянет метадату с MusicBrainz (блок РФ)
+      HTTP_PROXY: ${PROXY_URL}
+      HTTPS_PROXY: ${PROXY_URL}
+      ALL_PROXY: ${PROXY_URL}
+      NO_PROXY: localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/maloja:/mljdata
@@ -168,9 +178,9 @@ services:
       TZ: ${TZ}
       # Прокси для метадаты Lidarr (api.lidarr.audio за Cloudflare блочит РФ).
       # Пусто = без прокси. Внутренние сервисы исключены через NO_PROXY.
-      HTTP_PROXY: ${LIDARR_PROXY}
-      HTTPS_PROXY: ${LIDARR_PROXY}
-      ALL_PROXY: ${LIDARR_PROXY}
+      HTTP_PROXY: ${PROXY_URL}
+      HTTPS_PROXY: ${PROXY_URL}
+      ALL_PROXY: ${PROXY_URL}
       NO_PROXY: localhost,127.0.0.1,prowlarr,qbittorrent,slskd,navidrome,multi-scrobbler,soularr,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ${CONFIG_DIR}/lidarr:/config
@@ -203,9 +213,9 @@ services:
       # уровне приложения мимо UI-прокси. Из РФ Cloudflare даёт 403 ->
       # заворачиваем весь внешний трафик Prowlarr в SOCKS5. Внутренние
       # сервисы исключены через NO_PROXY (иначе синк с Lidarr сломается).
-      HTTP_PROXY: ${PROWLARR_PROXY}
-      HTTPS_PROXY: ${PROWLARR_PROXY}
-      ALL_PROXY: ${PROWLARR_PROXY}
+      HTTP_PROXY: ${PROXY_URL}
+      HTTPS_PROXY: ${PROXY_URL}
+      ALL_PROXY: ${PROXY_URL}
       NO_PROXY: localhost,127.0.0.1,lidarr,qbittorrent,slskd,navidrome,multi-scrobbler,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ${CONFIG_DIR}/prowlarr:/config
