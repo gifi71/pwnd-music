@@ -3,7 +3,7 @@
     {
       "name": "navidrome-gifi",
       "type": "endpointlz",
-      "clients": ["koito-gifi"],
+      "clients": ["koito-gifi", "maloja"],
       "data": {
         "token": "[[LB_TOKEN_GIFI]]",
         "username": "gifi"
@@ -36,6 +36,14 @@
         "url": "http://koito-al:4110",
         "username": "[[KOITO_USERNAME]]",
         "token": "[[KOITO_API_KEY_AL]]"
+      }
+    },
+    {
+      "name": "maloja",
+      "type": "maloja",
+      "data": {
+        "url": "http://maloja:42010",
+        "apiKey": "[[MLJ_API_KEY]]"
       }
     }
   ]

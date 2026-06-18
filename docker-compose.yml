@@ -33,16 +33,43 @@ services:
     container_name: navidrome
     user: "${PUID}:${PGID}"
     environment:
-      ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 72h
+      # ── Сканер ──
+      # ND_SCANSCHEDULE переименован в Scanner.Schedule (0.62.0)
+      ND_SCANNER_SCHEDULE: ${NAVIDROME_SCAN_SCHEDULE}
+      ND_SCANNER_WATCHERWAIT: 5s
       # Полный скан вычищает из базы файлы, помеченные missing
       # (иначе записи-призраки копятся после замен/апгрейдов Lidarr)
       ND_SCANNER_PURGEMISSING: full
+      # ── UI ──
       ND_DEFAULTLANGUAGE: ${NAVIDROME_LANGUAGE}
       ND_DEFAULTTHEME: ${NAVIDROME_THEME}
-      # Скробблинг через multi-scrobbler: он различает юзеров по токену
-      # (LB_TOKEN_* из .env) и раскидывает по персональным Koito.
+      # ── Внешние метадата-агенты (фото/био артистов, обложки) ──
+      ND_ENABLEEXTERNALSERVICES: "true"
+      ND_AGENTS: spotify,deezer,lastfm
+      ND_LASTFM_ENABLED: "true"
+      ND_LASTFM_APIKEY: ${ND_LASTFM_APIKEY}
+      ND_LASTFM_SECRET: ${ND_LASTFM_SECRET}
+      ND_LASTFM_LANGUAGE: ru
+      ND_SPOTIFY_ID: ${ND_SPOTIFY_ID}
+      ND_SPOTIFY_SECRET: ${ND_SPOTIFY_SECRET}
+      # ── Обложки / лирика ──
+      ND_COVERARTPRIORITY: "cover.*, folder.*, front.*, embedded, external"
+      ND_LYRICSPRIORITY: ".lrc,.txt,embedded"
+      ND_ENABLEMEDIAFILECOVERART: "true"
+      ND_ENABLEARTWORKPRECACHE: "true"
+      ND_IMAGECACHESIZE: 500MB
+      ND_TRANSCODINGCACHESIZE: 2GB
+      # ── Шаринг (для паблик-домена; ND_SHAREURL пусто = выкл) ──
+      ND_ENABLESHARING: "true"
+      ND_SHAREURL: ${NAVIDROME_SHAREURL}
+      # ── Автобэкап базы ──
+      ND_BACKUP_PATH: /data/backup
+      ND_BACKUP_SCHEDULE: "@every 24h"
+      ND_BACKUP_COUNT: "7"
+      # ── Скробблинг через multi-scrobbler: различает юзеров по токену ──
+      # (LB_TOKEN_* из .env), раскидывает по персональным Koito/Maloja.
       # Юзер вставляет СВОЙ токен в Navidrome -> Settings -> Personal.
       ND_LISTENBRAINZ_ENABLED: "true"
       ND_LISTENBRAINZ_BASEURL: http://multi-scrobbler:9078/1
@@ -72,6 +99,7 @@ services:
       KOITO_USERNAME: ${KOITO_USERNAME}
       KOITO_API_KEY_GIFI: ${KOITO_API_KEY_GIFI}
       KOITO_API_KEY_AL: ${KOITO_API_KEY_AL}
+      MLJ_API_KEY: ${MLJ_API_KEY}
     volumes:
       - ${CONFIG_DIR}/multi-scrobbler:/config
       # Декларативный конфиг — в гите, секреты приходят через env выше
@@ -103,6 +131,27 @@ services:
       - "${KOITO_AL_PORT}:4110"
     logging: *default-logging
 
+  # ── Maloja: углублённая статистика/анализ (для gifi) ──────────────────────
+  # MS пишет сюда параллельно с koito-gifi (fan-out). Ключ создаётся в UI
+  # Maloja -> Admin -> API Keys -> в .env MLJ_API_KEY -> restart multi-scrobbler.
+  maloja:
+    image: krateng/maloja:3.2.4
+    container_name: maloja
+    environment:
+      MALOJA_DATA_DIRECTORY: /mljdata
+      MALOJA_SKIP_SETUP: "true"           # обязательно для контейнера
+      MALOJA_FORCE_PASSWORD: ${MALOJA_ADMIN_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/maloja:/mljdata
+    ports:
+      - "${MALOJA_PORT}:42010"
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
   # ── Менеджер коллекции ───────────────────────────────────────────────────
   lidarr:
     image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls30
@@ -111,6 +160,12 @@ services:
       PUID: ${PUID}
       PGID: ${PGID}
       TZ: ${TZ}
+      # Прокси для метадаты Lidarr (api.lidarr.audio за Cloudflare блочит РФ).
+      # Пусто = без прокси. Внутренние сервисы исключены через NO_PROXY.
+      HTTP_PROXY: ${LIDARR_PROXY}
+      HTTPS_PROXY: ${LIDARR_PROXY}
+      ALL_PROXY: ${LIDARR_PROXY}
+      NO_PROXY: localhost,127.0.0.1,prowlarr,qbittorrent,slskd,navidrome,multi-scrobbler,soularr,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ${CONFIG_DIR}/lidarr:/config
       # Единый /data: библиотека и загрузки на одной ФС,
@@ -210,11 +265,19 @@ services:
       SLSKD_API_KEY: "role=ReadWrite;cidr=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16;${SLSKD_API_KEY}"
       SLSKD_DOWNLOADS_DIR: /data/downloads/slskd/complete
       SLSKD_INCOMPLETE_DIR: /data/downloads/slskd/incomplete
+      # Раздача обратно в Soulseek. Шарим саму библиотеку (копится навсегда),
+      # т.к. Soularr уносит файлы из download-папки в библиотеку при импорте.
+      SLSKD_SHARED_DIR: /data/music;/data/downloads/slskd/complete
+      # Лимиты отдачи (дом. интернет): скачивание безлимит, отдача с потолком.
+      SLSKD_UPLOAD_SPEED_LIMIT: ${SLSKD_UPLOAD_SPEED_LIMIT}
+      SLSKD_UPLOAD_SLOTS: ${SLSKD_UPLOAD_SLOTS}
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/slskd:/app
       # Тот же путь, что видит Lidarr: /data/downloads/slskd
       - ${DATA_DIR}/downloads/slskd:/data/downloads/slskd
+      # Библиотека на раздачу, read-only (защита от случайной записи)
+      - ${DATA_DIR}/music:/data/music:ro
     ports:
       - "${SLSKD_PORT}:5030"
       - "${SLSKD_LISTEN_PORT}:${SLSKD_LISTEN_PORT}"
@@ -252,6 +315,99 @@ services:
         condition: service_healthy
       slskd:
         condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Одноразовая настройка Lidarr (quality/metadata/naming/обложки) ──────
+  # Идемпотентно применяет perfectionism-дефолты через API при каждом up.
+  # Читает API-ключ из config.xml Lidarr. Завершается после применения.
+  lidarr-provision:
+    build:
+      context: .
+      dockerfile: lidarr-provision/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-lidarr-provision:latest
+    container_name: lidarr-provision
+    environment:
+      LIDARR_URL: http://lidarr:8686
+      LIDARR_CONFIG_XML: /lidarr-config/config.xml
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/lidarr:/lidarr-config:ro
+    networks: [music]
+    depends_on:
+      lidarr:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Одноразовая автосвязка Prowlarr -> Lidarr (индексеры синкаются сами) ─
+  prowlarr-provision:
+    build:
+      context: .
+      dockerfile: prowlarr-provision/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-prowlarr-provision:latest
+    container_name: prowlarr-provision
+    environment:
+      PROWLARR_URL: http://prowlarr:9696
+      PROWLARR_INTERNAL: http://prowlarr:9696
+      LIDARR_INTERNAL: http://lidarr:8686
+      PROWLARR_CONFIG_XML: /prowlarr-config/config.xml
+      LIDARR_CONFIG_XML: /lidarr-config/config.xml
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/prowlarr:/prowlarr-config:ro
+      - ${CONFIG_DIR}/lidarr:/lidarr-config:ro
+    networks: [music]
+    depends_on:
+      lidarr:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Обогащение: вшить обложки + синхро-лирику, .lrc рядом (ночной cron) ──
+  enrichment:
+    build:
+      context: .
+      dockerfile: enrichment/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-enrichment:latest
+    container_name: enrichment
+    user: "${PUID}:${PGID}"
+    environment:
+      ENRICH_SCHEDULE: ${ENRICH_SCHEDULE}
+      MUSIC_DIR: /music
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TZ: ${TZ}
+    volumes:
+      # Пишет в теги и .lrc -> НЕ read-only
+      - ${DATA_DIR}/music:/music
+    networks: [music]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Детектор фейкового FLAC (ночной cron, только отчёт + Telegram) ───────
+  fakeflac:
+    build:
+      context: .
+      dockerfile: fakeflac/Dockerfile
+    image: ghcr.io/gifi71/pwnd-music-fakeflac:latest
+    container_name: fakeflac
+    user: "${PUID}:${PGID}"
+    environment:
+      FAKEFLAC_SCHEDULE: ${FAKEFLAC_SCHEDULE}
+      MUSIC_DIR: /music
+      REPORTS_DIR: /reports
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TZ: ${TZ}
+    volumes:
+      - ${DATA_DIR}/music:/music:ro
+      - ${CONFIG_DIR}/fakeflac-reports:/reports
+    networks: [music]
     security_opt:
       - no-new-privileges:true
     logging: *default-logging
