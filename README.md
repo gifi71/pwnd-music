@@ -1,7 +1,35 @@
-# pwnd-music
+# 🎵 pwnd-music
 
-Selfhosted-стек для музыки на Docker Compose: стриминг, статистика прослушиваний,
-автоматическое пополнение библиотеки из торрентов и Soulseek.
+> Полностью автоматический self-hosted музыкальный стек: стриминг как в Spotify,
+> авто-пополнение библиотеки из торрентов и Soulseek в lossless, персональная
+> статистика прослушиваний, обложки/тексты/метадата — всё по умолчанию.
+
+<p>
+<img alt="License" src="https://img.shields.io/github/license/gifi71/pwnd-music">
+<img alt="Build" src="https://github.com/gifi71/pwnd-music/actions/workflows/build-images.yml/badge.svg">
+<img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
+<img alt="Self-hosted" src="https://img.shields.io/badge/self--hosted-yes-success">
+</p>
+
+Navidrome (стриминг) ← Lidarr (менеджер коллекции) ← qBittorrent + Soulseek
+(источники), Koito + Maloja (статистика), всё в Docker Compose. Из коробки:
+только настоящий FLAC, обложки и синхро-тексты в каждом треке, раскладка
+`Артист/Альбом (Год)/`, раздача обратно в сообщество.
+
+<!-- TODO(владелец): добавить скриншоты UI Navidrome/Koito в docs/screenshots/ -->
+
+## ⚡ Quickstart
+
+```bash
+git clone https://github.com/gifi71/pwnd-music.git /opt/pwnd-music
+cd /opt/pwnd-music
+cp .env.example .env && nano .env          # пути, таймзона, пароли, ключи
+docker compose pull                        # тянет готовые образы из GHCR
+docker compose up -d                       # поднять стек
+```
+
+Затем ~10 минут пост-настройки (см. ниже): ключи Koito/Maloja, Last.fm/Spotify,
+трекеры. Подробности развёртывания — в разделах ниже.
 
 ## Состав
 
@@ -172,9 +200,11 @@ slskd доступен на `http://<host>:5030` (логин из `.env`) — т
    Socks5 (хост/порт/креды своего прокси), Tag: `proxy`.
 3. Indexers → `+` → найти **NoNameClub** (или RuTracker) → логин/пароль
    аккаунта трекера → при необходимости Tag `proxy` → Test → Save.
-4. Settings → Apps → `+` → Lidarr: Prowlarr Server `http://prowlarr:9696`,
-   Lidarr Server `http://lidarr:8686`, API Key из Lidarr (Settings →
-   General). Sync — индексер сам появится в Lidarr.
+
+Связка Prowlarr → Lidarr создаётся **автоматически** контейнером
+`prowlarr-provision` при `docker compose up` (App «Lidarr», fullSync). Каждый
+добавленный индексер сам появляется в Lidarr — Settings → Apps руками настраивать
+не нужно. (Если хочешь проверить: Prowlarr → Settings → Apps → там уже есть Lidarr.)
 
 ### Добавить юзера с личной статистикой
 
@@ -325,6 +355,17 @@ docker compose logs -f <service>              # логи
 базе и под тем же тегом (CVE-фиксы базового слоя без смены версии приложения).
 Dependabot такие ребилды не видит, поэтому раз в месяц стоит делать
 `docker compose pull && docker compose up -d` даже без открытых PR.
+
+### Кастомные образы (CI/CD)
+
+Четыре образа собираются из этого репо: `enrichment`, `fakeflac`,
+`lidarr-provision`, `prowlarr-provision`. GitHub Actions
+([build-images.yml](.github/workflows/build-images.yml)) собирает их и пушит в
+**GHCR** (`ghcr.io/gifi71/pwnd-music-*`) при пуше в `main`, по тегам `v*` и
+вручную. На сервере они тянутся обычным `docker compose pull` — локальная
+сборка не нужна. Если правишь Dockerfile/скрипты — `git push`, CI пересоберёт,
+на сервере `docker compose pull && up -d`. Хочешь собрать локально —
+`docker compose build`.
 
 **Бэкапить:** `.env`, `config/` (базы и настройки сервисов), сам `${DATA_DIR}/music`.
 Репозиторий хранит всю декларативную конфигурацию; восстановление сервера =
