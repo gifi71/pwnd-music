@@ -193,6 +193,51 @@ def provision_metadata_consumer():
     print("  Kodi metadata consumer -> обложки на диск (HTTP %s)" % st)
 
 
+def provision_ui_prefs():
+    """РФ-дефолты UI: понедельник + русские форматы даты/времени.
+    uiLanguage НЕ трогаем — его id по API не достать надёжно (ставится в UI)."""
+    st, ui = req("GET", "/api/v1/config/ui")
+    if st != 200:
+        print("  ui config: HTTP %s — пропуск" % st)
+        return
+    ui["firstDayOfWeek"] = 1                        # понедельник
+    ui["calendarWeekColumnHeader"] = "ddd D.MM"
+    ui["shortDateFormat"] = "DD.MM.YYYY"
+    ui["longDateFormat"] = "dddd, D MMMM YYYY"
+    ui["timeFormat"] = "HH:mm"
+    st, _ = req("PUT", "/api/v1/config/ui", ui)
+    print("  ui -> понедельник + РФ дата/время (HTTP %s)" % st)
+
+
+def provision_write_tags():
+    """Тэгать аудиофайлы чистой метадатой (по умолчанию Lidarr этого не делает).
+    embedCoverArt оставляем включённым (вшивает обложку в трек)."""
+    st, mp = req("GET", "/api/v1/config/metadataprovider")
+    if st != 200:
+        print("  metadataprovider: HTTP %s — пропуск" % st)
+        return
+    mp["writeAudioTags"] = "allFiles"
+    mp["embedCoverArt"] = True
+    st, _ = req("PUT", "/api/v1/config/metadataprovider", mp)
+    print("  write audio tags -> allFiles + embed обложки (HTTP %s)" % st)
+
+
+def prune_quality_profiles():
+    """Удалить все профили качества кроме перфекционистского.
+    Профиль в использовании удалить нельзя — такие пропускаем (catch)."""
+    st, profiles = req("GET", "/api/v1/qualityprofile")
+    if st != 200:
+        return
+    for p in profiles:
+        if p["name"] == PROFILE_NAME:
+            continue
+        dst, resp = req("DELETE", "/api/v1/qualityprofile/%d" % p["id"])
+        if dst in (200, 204):
+            print("  удалён профиль '%s'" % p["name"])
+        else:
+            print("  профиль '%s' не удалён (в использовании?) HTTP %s" % (p["name"], dst))
+
+
 def render_soularr():
     """Сгенерить config/soularr/config.ini из шаблона + ключи (Lidarr из
     config.xml, slskd из env). Убирает ручную правку конфига Soularr."""
@@ -231,6 +276,12 @@ def main():
     provision_metadata_consumer()
     print("[5/5] root folder")
     provision_rootfolder()
+    print("[+] ui prefs (РФ)")
+    provision_ui_prefs()
+    print("[+] write audio tags")
+    provision_write_tags()
+    print("[+] прочистка профилей качества")
+    prune_quality_profiles()
     print("[+] soularr config")
     render_soularr()
     print("Готово.")
