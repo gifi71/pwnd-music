@@ -378,6 +378,22 @@ docker compose start qbittorrent
 - Переменные **опциональны**: пусто = стек работает без прокси (актуально вне РФ).
 - Для трекеров в Prowlarr — отдельный Indexer Proxy в его UI.
 
+## Интернет-радио (Navidrome)
+
+Navidrome умеет проигрывать веб-радиостанции: UI → **Radios** → добавить название
++ **прямой URL потока** (mp3/aac, не страницу плеера). Доступно и в мобильных
+клиентах (Symfonium, play:Sub, Amperfy). Где брать станции и прямые ссылки:
+
+- **[Radio Browser](https://www.radio-browser.info)** — открытая community-база,
+  бесплатно, без аккаунта, тысячи станций всех стран **включая РФ** (фильтр по
+  country). Даёт готовый прямой stream-URL — копируй в Navidrome.
+- **[SomaFM](https://somafm.com)** — куратор, без рекламы, хорошее качество
+  (есть 320k AAC): Groove Salad, Drone Zone и др.
+
+Алгоритмического «радио по треку» (Spotify-style) у Navidrome нет — это либо
+Smart Playlists (`.nsp`-правила), либо клиент с Last.fm-похожими (у нас Last.fm
+включён).
+
 ## Проверка, что всё связано
 
 1. В Lidarr добавить артиста с парой альбомов → Search.

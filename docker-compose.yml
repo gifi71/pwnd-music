@@ -271,6 +271,9 @@ services:
       # Лимиты отдачи (дом. интернет): скачивание безлимит, отдача с потолком.
       SLSKD_UPLOAD_SPEED_LIMIT: ${SLSKD_UPLOAD_SPEED_LIMIT}
       SLSKD_UPLOAD_SLOTS: ${SLSKD_UPLOAD_SLOTS}
+      # Авто-рескан шары (минуты) — иначе slskd видит только то, что было при
+      # старте; новые импорты/обогащённые треки не раздаются до рескана.
+      SLSKD_SHARE_CACHE_RETENTION: ${SLSKD_SHARE_CACHE_RETENTION}
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/slskd:/app
