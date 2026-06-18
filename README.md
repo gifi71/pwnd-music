@@ -1,7 +1,7 @@
 # 🎵 pwnd-music
 
 > Полностью автоматический self-hosted музыкальный стек: стриминг как в Spotify,
-> авто-пополнение библиотеки из торрентов и Soulseek в lossless, персональная
+> авто-пополнение библиотеки из торрентов и Soulseek в lossless качестве, персональная
 > статистика прослушиваний, обложки/тексты/метадата — всё по умолчанию.
 
 <p>
@@ -11,10 +11,10 @@
 <img alt="Self-hosted" src="https://img.shields.io/badge/self--hosted-yes-success">
 </p>
 
-Navidrome (стриминг) ← Lidarr (менеджер коллекции) ← qBittorrent + Soulseek
+Navidrome (стриминг) <— Lidarr (менеджер коллекции) <— qBittorrent + Soulseek
 (источники), Koito + Maloja (статистика), всё в Docker Compose. Из коробки:
-только настоящий FLAC, обложки и синхро-тексты в каждом треке, раскладка
-`Артист/Альбом (Год)/`, раздача обратно в сообщество.
+только настоящий FLAC, обложки и синхро-тексты в каждом треке, древо путей
+`Артист/Альбом (Год)/`, раздача библиотеки обратно в сообщество.
 
 <!-- TODO(владелец): добавить скриншоты UI Navidrome/Koito в docs/screenshots/ -->
 
@@ -61,21 +61,38 @@ docker compose up -d                       # первый раз СОБИРАЕ�
 ```mermaid
 flowchart TD
     U([ты: добавил артиста/альбом]) --> L[Lidarr]
+    P[Prowlarr] -. "индексеры трекеров" .-> L
+
     L -- "wanted-список" --> S[Soularr]
-    L -- "релиз найден на трекере" --> Q[qBittorrent]
+    L -- "грабит релиз с трекера" --> Q[qBittorrent]
     S -- "API" --> SL[slskd]
-    SL -- "поиск" --> SS([сеть Soulseek])
-    SL --> D1["/data/downloads/slskd/complete"]
+    SL <-- "поиск / скачивание" --> SS([сеть Soulseek])
+
+    SL --> D1["/data/downloads/slskd"]
     Q --> D2["/data/downloads/torrents"]
     D1 --> IMP[Lidarr: импорт hardlink]
     D2 --> IMP
     IMP --> M["/data/music"]
+
+    M -. "раздача библиотеки (seeding)" .-> SL
+    Q -. "сидинг торрентов" .-> SS2([торрент-пиры])
+
+    EN[enrichment ⏰: вшить обложки + синхро-лирику] --> M
+    M --> EN
+    M --> FF[fakeflac ⏰: детект фейкового FLAC]
+    FF --> TG([отчёт в Telegram])
+
     M --> N[Navidrome: сканирует и стримит]
     N -- "трек доигран → ListenBrainz API" --> MS[multi-scrobbler]
     MS -- "токен gifi" --> K1[koito-gifi]
     MS -- "токен al" --> K2[koito-al]
     MS -- "токен gifi" --> MJ[maloja]
 ```
+
+> `lidarr-provision` и `prowlarr-provision` — одноразовые init-контейнеры:
+> при `up` настраивают Lidarr (качество/метадата/нейминг/обложки/root folder),
+> генерят конфиг Soularr и связку Prowlarr→Lidarr, затем завершаются. На схеме
+> не показаны (это настройка, не поток данных). `⏰` — ночной cron.
 
 ## Структура на диске
 
