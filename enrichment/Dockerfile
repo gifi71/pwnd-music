@@ -1,5 +1,5 @@
 # Enrichment: вшивание обложек + синхро-лирики, .lrc рядом. Cron через supercronic.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # apt-пины в Debian брит — версии исчезают из репо
 # hadolint ignore=DL3008
