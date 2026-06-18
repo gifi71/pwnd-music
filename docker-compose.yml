@@ -73,6 +73,12 @@ services:
       # Юзер вставляет СВОЙ токен в Navidrome -> Settings -> Personal.
       ND_LISTENBRAINZ_ENABLED: "true"
       ND_LISTENBRAINZ_BASEURL: http://multi-scrobbler:9078/1
+      # Прокси для метадаты-агентов (Spotify/Last.fm часто блочат РФ). Пусто =
+      # без прокси. NO_PROXY обязателен — иначе скробблы в MS пойдут через прокси.
+      HTTP_PROXY: ${NAVIDROME_PROXY}
+      HTTPS_PROXY: ${NAVIDROME_PROXY}
+      ALL_PROXY: ${NAVIDROME_PROXY}
+      NO_PROXY: localhost,127.0.0.1,multi-scrobbler,lidarr,prowlarr,qbittorrent,slskd,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       TZ: ${TZ}
     volumes:
       - ${CONFIG_DIR}/navidrome:/data
