@@ -23,7 +23,7 @@ RUN git clone --depth 1 https://github.com/Sg4Dylan/FLAD /opt/FLAD \
     && test -f /opt/FLAD/onnx/flad.onnx \
     && chmod -R a+w /opt/FLAD       # eval.py пишет temp/ относительно cwd
 
-ARG SUPERCRONIC_VERSION=v0.2.33
+ARG SUPERCRONIC_VERSION=v0.2.46
 ADD https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64 /usr/local/bin/supercronic
 RUN chmod +x /usr/local/bin/supercronic
 
