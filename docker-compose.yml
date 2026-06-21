@@ -174,7 +174,7 @@ services:
   # «flow»-плейлисты в Navidrome. Интеграции (Lidarr/Navidrome/Last.fm/
   # ListenBrainz) настраиваются в UI :3001 ПОСЛЕ старта, не через env.
   aurral:
-    image: ghcr.io/lklynet/aurral:1.24.0
+    image: ghcr.io/lklynet/aurral:1.76.49
     container_name: aurral
     environment:
       PUID: ${PUID}
