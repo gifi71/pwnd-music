@@ -1,6 +1,6 @@
 # beets — НЕразрушающий чекер библиотеки (целостность + дубликаты). Ночной cron.
 # Не реннеймит и не двигает файлы — только каталогизирует в свою БД и проверяет.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # flac (--test), mp3val (битые mp3), libchromaprint-tools (fpcalc для chroma)
 # hadolint ignore=DL3008
