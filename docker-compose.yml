@@ -34,7 +34,7 @@ networks:
 services:
   # ── Стриминг ─────────────────────────────────────────────────────────────
   navidrome:
-    image: deluan/navidrome:0.62.0
+    image: deluan/navidrome:0.63.2
     container_name: navidrome
     user: "${PUID}:${PGID}"
     environment:
@@ -101,7 +101,7 @@ services:
 
   # ── Роутер скробблов: токен юзера -> его персональный Koito ─────────────
   multi-scrobbler:
-    image: foxxmd/multi-scrobbler:0.14.1
+    image: foxxmd/multi-scrobbler:0.14.2
     container_name: multi-scrobbler
     environment:
       TZ: ${TZ}
@@ -174,7 +174,7 @@ services:
   # «flow»-плейлисты в Navidrome. Интеграции (Lidarr/Navidrome/Last.fm/
   # ListenBrainz) настраиваются в UI :3001 ПОСЛЕ старта, не через env.
   aurral:
-    image: ghcr.io/lklynet/aurral:1.24.0
+    image: ghcr.io/lklynet/aurral:1.76.51
     container_name: aurral
     environment:
       PUID: ${PUID}
@@ -292,7 +292,7 @@ services:
 
   # ── Soulseek-демон ───────────────────────────────────────────────────────
   slskd:
-    image: slskd/slskd:0.25.1
+    image: slskd/slskd:0.26.0
     container_name: slskd
     user: "${PUID}:${PGID}"
     environment:
