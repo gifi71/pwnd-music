@@ -34,7 +34,7 @@ networks:
 services:
   # ── Стриминг ─────────────────────────────────────────────────────────────
   navidrome:
-    image: deluan/navidrome:0.62.0
+    image: deluan/navidrome:0.63.2
     container_name: navidrome
     user: "${PUID}:${PGID}"
     environment:
@@ -101,7 +101,7 @@ services:
 
   # ── Роутер скробблов: токен юзера -> его персональный Koito ─────────────
   multi-scrobbler:
-    image: foxxmd/multi-scrobbler:0.14.1
+    image: foxxmd/multi-scrobbler:0.16.4
     container_name: multi-scrobbler
     environment:
       TZ: ${TZ}
@@ -147,7 +147,7 @@ services:
   # MS пишет сюда параллельно с koito-gifi (fan-out). Ключ создаётся в UI
   # Maloja -> Admin -> API Keys -> в .env MLJ_API_KEY -> restart multi-scrobbler.
   maloja:
-    image: krateng/maloja:3.2.4
+    image: krateng/maloja:3.2.6
     container_name: maloja
     environment:
       MALOJA_DATA_DIRECTORY: /mljdata
@@ -292,7 +292,7 @@ services:
 
   # ── Soulseek-демон ───────────────────────────────────────────────────────
   slskd:
-    image: slskd/slskd:0.25.1
+    image: slskd/slskd:0.26.0
     container_name: slskd
     user: "${PUID}:${PGID}"
     environment:
